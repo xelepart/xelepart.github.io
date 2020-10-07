@@ -1,6 +1,11 @@
-<canvas id="c" width="100%" height="100%"></canvas>
+<canvas id="canvas"></canvas>
+
+<script src="game.js"></script>
 
 <script>
+    var c = document.getElementById("canvas");
+    var ctx = c.getContext("2d");
+
 function showProgressBar(ctx) {
 	var cur = 0
 	var max=100;
@@ -16,21 +21,8 @@ function showProgressBar(ctx) {
 	}
 	advanceProgressBar();
 }
-var c = document.getElementById("c");
-  
-c.width = window.innerWidth;
-c.height = window.innerHeight;
-  
-var ctx = c.getContext("2d");
-ctx.moveTo(0, 0);
-ctx.lineTo(2000, 1000);
-ctx.stroke();
-
-ctx.beginPath();
-ctx.arc(95, 50, 40, 0, 2 * Math.PI);
-ctx.stroke();
-
-ctx.font = "30px Arial";
-ctx.fillText("Ugh, World", 100, 50);
 showProgressBar(ctx);
+var task = {};
+task.imageUrl = 'images/farmer1.svg';
+drawTask(task)
 </script>
