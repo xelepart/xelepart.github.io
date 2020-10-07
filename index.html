@@ -2,9 +2,13 @@
 
 <script>
 var c = document.getElementById("c");
+  
+c.width = window.innerWidth;
+c.height = window.innerHeight;
+  
 var ctx = c.getContext("2d");
 ctx.moveTo(0, 0);
-ctx.lineTo(200, 100);
+ctx.lineTo(2000, 1000);
 ctx.stroke();
 
 ctx.beginPath();
