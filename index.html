@@ -1,6 +1,21 @@
 <canvas id="c" width="100%" height="100%"></canvas>
 
 <script>
+function showProgressBar(ctx) {
+	var cur = 0
+	var max=100;
+	advanceProgressBar = function() {
+		if (cur < max) {
+			ctx.moveTo(10, cur);
+			ctx.lineTo(10, cur + 10);
+			ctx.stroke();
+			cur += 10;
+			setTimeout(advanceProgressBar, 500);
+		}
+
+	}
+	advanceProgressBar();
+}
 var c = document.getElementById("c");
   
 c.width = window.innerWidth;
@@ -17,4 +32,5 @@ ctx.stroke();
 
 ctx.font = "30px Arial";
 ctx.fillText("Ugh, World", 100, 50);
+showProgressBar(ctx);
 </script>
