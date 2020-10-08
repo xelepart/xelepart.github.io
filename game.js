@@ -1,7 +1,6 @@
 
 var drawTask = function(task) {
     var c = document.getElementById("canvas");
-console.log("hello!")
     c.width = window.innerWidth;
     c.height = window.innerHeight;
 
@@ -10,27 +9,23 @@ console.log("hello!")
     var image = task.img;
     if (image == null) {
         task.img = new Image();
+        task.img.onload = function() {
+            drawTask(task);
+            task.img.onload = null;
+        }
         task.img.src = task.imageUrl;
-        image = task.img;
-        console.log(image);
+        return;
     }
-console.log("hello!")
 
     ctx.save();
-//    ctx.moveTo(-50,-50);
-//    ctx.beginPath();
-//    ctx.arc(2*24, 2*24, 2*24, 0, Math.PI*2, true);
-//    ctx.closePath();
-//    ctx.clip();
-
-    ctx.drawImage(image, 50, 50, 4*240+2, 4*240+2);
 
     ctx.beginPath();
-//    ctx.arc(0, 0, 2, 0, Math.PI*2, true);
-//    ctx.clip();
-//    ctx.closePath();
+    ctx.arc(task.x, task.y, 26, 0, Math.PI*2, true);
+    ctx.closePath();
+    ctx.clip();
+    ctx.drawImage(image, task.x-13, task.y-13, 26, 26);
+
     ctx.restore();
-console.log("hello!")
 }
 
 // original example code
