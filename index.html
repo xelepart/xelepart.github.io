@@ -3,29 +3,5 @@
 <script src="game.js"></script>
 
 <script>
-    var c = document.getElementById("canvas");
-    var ctx = c.getContext("2d");
-
-function showProgressBar(ctx) {
-	var cur = 0
-	var max=100;
-	advanceProgressBar = function() {
-		if (cur < max) {
-			ctx.moveTo(10, cur);
-			ctx.lineTo(10, cur + 10);
-			ctx.stroke();
-			cur += 10;
-			setTimeout(advanceProgressBar, 500);
-		}
-
-	}
-	advanceProgressBar();
-}
-showProgressBar(ctx);
-var task = {};
-task.imageUrl = 'images/farmer1.svg';
-task.x = 50;
-task.y = 200;
-task.progress = 0.75;
-drawTask(task)
+	startGame();
 </script>
