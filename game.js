@@ -98,11 +98,13 @@ function startGame() {
         advanceProgressBar();
     }
     showProgressBar(ctx);
+    // Someone should rename this variable
     var lol_task = {};
     lol_task.imageUrl = 'images/farmer1.svg';
     lol_task.x = 50;
     lol_task.y = 200;
     lol_task.progress = 0.75;
     drawTask(lol_task)
+
 
 }
