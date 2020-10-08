@@ -120,5 +120,4 @@ function startGame() {
 
 
     drawTask(task)
-
 }
