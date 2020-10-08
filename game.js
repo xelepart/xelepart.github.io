@@ -1,31 +1,42 @@
+game = {tasks:[]}
 
-var drawTask = function(task) {
-    var c = document.getElementById("canvas");
-    c.width = window.innerWidth;
-    c.height = window.innerHeight;
-
-    var ctx = c.getContext("2d");
-
-    var image = task.img;
-    if (image == null) {
-        task.img = new Image();
-        task.img.onload = function() {
-            drawTask(task);
-            task.img.onload = null;
-        }
-        task.img.src = task.imageUrl;
-        return;
-    }
+var draw = function() {
+    var canvas = document.getElementById("canvas");
+    var ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
 
     ctx.save();
 
-    ctx.beginPath();
-    ctx.arc(task.x, task.y, 26, 0, Math.PI*2, true);
-    ctx.closePath();
-    ctx.clip();
-    ctx.drawImage(image, task.x-13, task.y-13, 26, 26);
+    game.tasks.forEach(task => {
+        var image = task.img;
+        if (image == null) {
+            task.img = new Image();
+            task.img.onload = function() {
+                ctx.drawImage(task.img, task.x-25, task.y-25, 50, 50);
+                task.img.onload = null;
+            }
+            task.img.src = task.imageUrl;
+            return;
+        }
+
+        ctx.drawImage(image, task.x-25, task.y-25, 50, 50);
+        // gotta put a progress bar into the image now?
+        if (task.progress < 1) {
+            ctx.globalAlpha=0.1
+            ctx.beginPath();
+            ctx.moveTo(task.x, task.y);
+            ctx.lineTo(task.x, task.y + 25);
+            ctx.arc(task.x, task.y, 25, -0.5*Math.PI, 2 * Math.PI * (task.progress) - 0.5*Math.PI, true);
+            ctx.lineTo(task.x, task.y);
+            ctx.fill();
+            ctx.globalAlpha=1
+            task.progress = Math.min(1,task.progress+0.003);
+        }
+    })
 
     ctx.restore();
+    setTimeout(draw, 30);
 }
 
 // original example code
@@ -81,25 +92,26 @@ function startGame() {
     var c = document.getElementById("canvas");
     var ctx = c.getContext("2d");
 
-    /* I think this shouldn't affect you */
-    function showProgressBar(ctx) {
-        var cur = 0
-        var max=100;
-        advanceProgressBar = function() {
-            if (cur < max) {
-                ctx.moveTo(10, cur);
-                ctx.lineTo(10, cur + 10);
-                ctx.stroke();
-                cur += 10;
-                setTimeout(advanceProgressBar, 500);
-            }
+//    /* I think this shouldn't affect you */
+//    function showProgressBar(ctx) {
+//        var cur = 0
+//        var max=100;
+//        advanceProgressBar = function() {
+//            if (cur < max) {
+//                ctx.moveTo(10, cur);
+//                ctx.lineTo(10, cur + 10);
+//                ctx.stroke();
+//                cur += 10;
+//                setTimeout(advanceProgressBar, 500);
+//            }
+//
+//        }
+//        advanceProgressBar();
+//    }
+//    showProgressBar(ctx);
 
-        }
-        advanceProgressBar();
-    }
-    showProgressBar(ctx);
     var task1 = {};
-    task1.imageUrl = 'images/farmer1.svg';
+    task1.imageUrl = 'images/farm1.jpg';
     task1.x = 50;
     task1.y = 200;
     task1.progress = 0.75;
@@ -111,13 +123,11 @@ function startGame() {
     task2.progress = 1;
 
     var task3 = {};
-    task3.imageUrl = 'images/farmer2.jpg';
+    task3.imageUrl = 'images/farm2.jpg';
     task3.x = 200;
     task3.y = 50;
     task3.progress = 0.25;
 
-    var tasks = [task1, task2, task3];
-
-
-    drawTask(task)
+    game.tasks = [task1, task2, task3];
+    draw();
 }
