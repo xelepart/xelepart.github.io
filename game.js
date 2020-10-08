@@ -92,24 +92,6 @@ function startGame() {
     var c = document.getElementById("canvas");
     var ctx = c.getContext("2d");
 
-//    /* I think this shouldn't affect you */
-//    function showProgressBar(ctx) {
-//        var cur = 0
-//        var max=100;
-//        advanceProgressBar = function() {
-//            if (cur < max) {
-//                ctx.moveTo(10, cur);
-//                ctx.lineTo(10, cur + 10);
-//                ctx.stroke();
-//                cur += 10;
-//                setTimeout(advanceProgressBar, 500);
-//            }
-//
-//        }
-//        advanceProgressBar();
-//    }
-//    showProgressBar(ctx);
-
     var task1 = {};
     task1.imageUrl = 'images/farm1.jpg';
     task1.x = 50;
@@ -130,4 +112,5 @@ function startGame() {
 
     game.tasks = [task1, task2, task3];
     draw();
+
 }
