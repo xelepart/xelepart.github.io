@@ -81,6 +81,7 @@ function startGame() {
     var c = document.getElementById("canvas");
     var ctx = c.getContext("2d");
 
+    /* I think this shouldn't affect you */
     function showProgressBar(ctx) {
         var cur = 0
         var max=100;
