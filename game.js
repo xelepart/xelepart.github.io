@@ -98,11 +98,11 @@ function startGame() {
         advanceProgressBar();
     }
     showProgressBar(ctx);
-    var task = {};
-    task.imageUrl = 'images/farmer1.svg';
-    task.x = 50;
-    task.y = 200;
-    task.progress = 0.75;
-    drawTask(task)
+    var lol_task = {};
+    lol_task.imageUrl = 'images/farmer1.svg';
+    lol_task.x = 50;
+    lol_task.y = 200;
+    lol_task.progress = 0.75;
+    drawTask(lol_task)
 
 }
