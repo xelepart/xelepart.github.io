@@ -97,11 +97,27 @@ function startGame() {
         advanceProgressBar();
     }
     showProgressBar(ctx);
-    var task = {};
-    task.imageUrl = 'images/farmer1.svg';
-    task.x = 50;
-    task.y = 200;
-    task.progress = 0.75;
+    var task1 = {};
+    task1.imageUrl = 'images/farmer1.svg';
+    task1.x = 50;
+    task1.y = 200;
+    task1.progress = 0.75;
+
+    var task2 = {};
+    task2.imageUrl = 'images/rock.png';
+    task2.x = 100;
+    task2.y = 200;
+    task2.progress = 1;
+
+    var task3 = {};
+    task3.imageUrl = 'images/farmer2.jpg';
+    task3.x = 200;
+    task3.y = 50;
+    task3.progress = 0.25;
+
+    var tasks = [task1, task2, task3];
+
+
     drawTask(task)
 
 }
