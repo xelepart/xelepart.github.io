@@ -1,7 +1,30 @@
 <html>
 <body style="margin:0">
 <canvas id="canvas" style="position: absolute;z-index: 1"></canvas>
-<div id="tooltip" style="position: absolute;z-index: 2;top:250px;left:210px;background-color:grey;border: 5px solid honeydew;  border-radius: 10px;padding:20px;display:none">Tooltip</div>
+<div id="UI" style="position: relative;z-index: 4;top:250px:px;background-color:grey;border: 5px solid honeydew;   user-select: none;  border-radius: 10px;padding:20px;display:black">
+	<div id="statsblock" style="color: cyan;">
+		<span id="GoldBlock"><span id="gold">100</span><span style="color:yellow"> gold</span>
+		<span id="AgeBlock"><span id="age">1</span><span id="agelabel" style="color:lightgreen"> years old</span>
+	</div>
+	<div id="messages" style="color:White; border-top:solid 1px black;overflow: scroll;height: 100px">
+		Messages<br/>
+		Messages<br/>
+		Messages<br/>
+		Messages<br/>
+		Messages<br/>
+		Messages<br/>
+		Messages<br/>
+		Messages<br/>
+		Messages<br/>
+		Messages
+		Messages
+		Messages
+		Messages
+		Messages
+		Messages
+</div>
+
+<div id="tooltip" style="position: absolute;z-index: 3;top:250px;left:210px;background-color:grey;border: 5px solid honeydew;   user-select: none;  border-radius: 10px;padding:20px;display:none">Tooltip</div>
 </body>
 </html>
 <script src="game.js"></script>

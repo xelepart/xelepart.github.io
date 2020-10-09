@@ -1,4 +1,4 @@
-game = {alltasks:[],resources:{},activetask:null,camscale:1,camtransx:0,camtransy:0,age:18,maxage:50}
+game = {alltasks:[],resources:{},activetask:null,camscale:1,camtransx:0,camtransy:0,age:18,maxage:25}
 
 canvas = document.getElementById("canvas");
 ctx = canvas.getContext("2d");
@@ -68,22 +68,39 @@ var doTask = function(task) {
     task.life.yearsWorked = 0;
 }
 
+function sendMessage(text) {
+    messageBlock = document.getElementById("messages")
+    messageBlock.innerHTML = text + "<br/>" + messageBlock.innerHTML;
+}
+
 function killPlayer(description) {
-    console.log(description);
+    sendMessage(description);
 
     game.alltasks.forEach(task => {
         task.history.maxlevel = Math.max(task.history.maxlevel||0, task.life.level||0);
         task.life.level = 0;
     });
-
+    game.age=18;    
+    game.activetask = null;
+    refreshStats();
 }
 
+function refreshStats()
+{
+    document.getElementById("age").innerHTML=Math.round(game.age * 10) / 10;
+    if (game.maxage - game.age > 5) {
+        document.getElementById("agelabel").style.color="lightgreen";
+    } else {
+        document.getElementById("agelabel").style.color="pink";
+    }
+
+}
 var update = function(elapsed) {
     if (game.activetask) { // if no active task, we don't update the game! NOT IDLE!
         var maxYearsElapsed = elapsed * GAMESPEED_RATIO;
         var remainingYears = game.activetask.def.completionYears - game.activetask.life.yearsWorked;
         var yearsElapsed = Math.min(maxYearsElapsed, remainingYears);
-
+        refreshStats()
         // continue the active task...
         game.activetask.life.yearsWorked += yearsElapsed;
 
