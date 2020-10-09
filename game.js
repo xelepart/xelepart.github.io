@@ -153,10 +153,10 @@ function findClosestTask(evt) {
 }
 function showToolTip(task) {
     var tooltip = document.getElementById("tooltip");
-    tooltip.style.display="block"
     tooltip.innerHTML=task.name + "<br/>" + task.description
     tooltip.style.left=event.clientX ;
     tooltip.style.top=event.clientY + 20;
+    tooltip.style.display="block"
 }
 function hideToolTip() {
     tooltip.style.display="none";
