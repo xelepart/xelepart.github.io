@@ -134,7 +134,34 @@ function getMousePos(canvas, event) {
         y: event.clientY - rect.top
     };
 }
+function findClosestTask(evt) {
+        var mousePos = getMousePos(canvas, evt);
+        var closestTask = null;
+        var closestClick = 25.1;
 
+
+        game.tasks.forEach(task => {
+        xd = task.x - mousePos.x;
+        yd = task.y - mousePos.y;
+        d = Math.sqrt(xd*xd+yd*yd)
+        if (d < closestClick) {
+            closestClick = d;
+            closestTask = task;
+        }
+    });
+    return closestTask;
+}
+function showToolTip(task) {
+    var tooltip = document.getElementById("tooltip");
+    tooltip.style.display="block"
+    tooltip.innerHTML=task.name + "<br/>" + task.description
+    tooltip.style.left=event.clientX ;
+    tooltip.style.top=event.clientY + 20;
+}
+function hideToolTip() {
+    tooltip.style.display="none";
+
+}
 function startGame() {
     var c = document.getElementById("canvas");
     var ctx = c.getContext("2d");
@@ -148,6 +175,8 @@ function startGame() {
     task1.completionGeneration = {wheat:1};
     task1.completionYears = 1;
     task1.unlock = null;
+    task1.name = "Farm";
+    task1.description = "Farm some resources";
 
     var task2 = {};
     task2.imageUrl = 'images/rock.png';
@@ -159,6 +188,8 @@ function startGame() {
     task2.completionGeneration = {stone:50};
     task2.completionYears = 1.5;
     task2.unlock = {task: task1, level:4, permanent:true}
+    task2.name = "rock";
+    task2.description = "Mining maybe?";
 
     var task3 = {};
     task3.imageUrl = 'images/farm2.jpg';
@@ -170,26 +201,27 @@ function startGame() {
     task3.completionGeneration = {wheat:2};
     task3.completionYears = 0.75;
     task3.unlock = {task: task2, level:1, permanent:false}
+    task3.name = "Better Farming";
+    task3.description = "Like if you are better at farming";
 
     game.alltasks = [task1, task2, task3];
 
     checkVisibleTasks();
+    canvas.addEventListener('mousemove', function(evt) {
+        task = findClosestTask(evt);
+        if (task) {
+            console.log("Yeah hovered");
+            showToolTip(task);
+        } else { // No task, hide tooltip
+            hideToolTip(task);
+        }
+    });
 
     canvas.addEventListener('click', function(evt) {
-        var mousePos = getMousePos(canvas, evt);
-        var clickedTask = null;
-        var closestClick = 25.1;
-        game.tasks.forEach(task => {
-            xd = task.x - mousePos.x;
-            yd = task.y - mousePos.y;
-            d = Math.sqrt(xd*xd+yd*yd)
-            if (d < closestClick) {
-                closestClick = d;
-                clickedTask = task;
-            }
-        });
-
-        doTask(clickedTask);
+        task = findClosestTask(evt);
+        if (task) {
+            doTask(task);
+        }
 
     }, false);
 
