@@ -1,4 +1,4 @@
-game = {alltasks:[],resources:{},activetask:null,camscale:1,camtransx:0,camtransy:0,age:18,maxage:25}
+game = {alltasks:[],resources:{},activetask:null,camscale:1,camtransx:0,camtransy:0,age:18,maxage:40}
 
 canvas = document.getElementById("canvas");
 ctx = canvas.getContext("2d");
@@ -246,7 +246,7 @@ function startGame() {
     task2.completionGeneration = {stone:50};
     task2.completionYears = 5;
     task2.unlock = {def: task1, level:4, permanent:true}
-    task2.name = "Remove Rocks";
+    task2.name = "Remove Stones";
     task2.description = "These rocks are messin' with yer farmin'! Git!";
 
     var task3 = {};
