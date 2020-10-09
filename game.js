@@ -68,14 +68,18 @@ var doTask = function(task) {
     task.life.yearsWorked = 0;
 }
 
+function sendMessage(text) {
+    console.log(text);
+}
+
 function killPlayer(description) {
-    console.log(description);
+    sendMessage(description);
 
     game.alltasks.forEach(task => {
         task.history.maxlevel = Math.max(task.history.maxlevel||0, task.life.level||0);
         task.life.level = 0;
     });
-
+    game.activetask = null;
 }
 
 var update = function(elapsed) {
