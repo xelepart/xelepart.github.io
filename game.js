@@ -215,7 +215,7 @@ function startGame() {
     var ctx = c.getContext("2d");
 
     var task1 = {};
-    task1.imageUrl = 'images/farm1.jpg';
+    task1.imageUrl = 'images/farm1.png';
     task1.repeatable = true;
     task1.completionGeneration = {wheat:1};
     task1.completionYears = 1;
@@ -224,7 +224,7 @@ function startGame() {
     task1.description = "Farm some resources";
 
     var task2 = {};
-    task2.imageUrl = 'images/rock.png';
+    task2.imageUrl = 'images/stone.png';
     task2.repeatable = false;
     task2.completionGeneration = {stone:50};
     task2.completionYears = 5;
@@ -233,7 +233,7 @@ function startGame() {
     task2.description = "These rocks are messin' with yer farmin'! Git!";
 
     var task3 = {};
-    task3.imageUrl = 'images/farm2.jpg';
+    task3.imageUrl = 'images/farm2.png';
     task3.repeatable = true;
     task3.passiveGeneration = {wheat:0.5};
     task3.completionGeneration = {wheat:2};
