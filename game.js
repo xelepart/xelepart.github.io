@@ -1,4 +1,4 @@
-game = {alltasks:[],resources:{},activetask:null,camscale:1,camtransx:0,camtransy:0,age:18,maxage:40}
+game = {alltasks:[],resources:{},activetask:null,camscale:1,camtransx:0,camtransy:0,age:18,maxage:25}
 
 canvas = document.getElementById("canvas");
 ctx = canvas.getContext("2d");
@@ -80,8 +80,11 @@ function killPlayer(description) {
         task.history.maxlevel = Math.max(task.history.maxlevel||0, task.life.level||0);
         task.life.level = 0;
     });
-    game.age=18;    
+    game.age = 18;
     game.activetask = null;
+
+    checkVisibleTasks();
+
     refreshStats();
 }
 
@@ -128,9 +131,10 @@ var update = function(elapsed) {
     }
 }
 
+var canvasdiv = document.getElementById("canvasdiv");
 var draw = function() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    canvas.width = canvasdiv.offsetWidth;
+    canvas.height = canvasdiv.offsetHeight;
 
 //    ctx.save();
 
@@ -213,7 +217,7 @@ function showToolTip(task) {
     var tooltip = document.getElementById("tooltip");
     tooltip.innerHTML = task.def.name + "<br/>" + task.def.description;
     tooltip.style.left = event.clientX + 20;
-    tooltip.style.top = event.clientY - 20;
+    tooltip.style.top = event.clientY;
     tooltip.style.display = "block";
 }
 
