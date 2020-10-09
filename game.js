@@ -135,6 +135,44 @@ function loop(timestamp) {
 }
 var lastRender = 0
 
+function findClosestTask(evt) {
+    var rect = canvas.getBoundingClientRect();
+    var x = event.clientX - rect.left;
+    var y = event.clientY - rect.top;
+
+    x = x - game.camtransx;
+    y = y - game.camtransy;
+
+    x = x / game.camscale;
+    y = y / game.camscale;
+
+    var closestTask = null;
+    var closestClick = 25.1;
+
+    game.tasks.forEach(task => {
+        xd = task.x - x;
+        yd = task.y - y;
+        d = Math.sqrt(xd*xd+yd*yd)
+        if (d < closestClick) {
+            closestClick = d;
+            closestTask = task;
+        }
+    });
+    return closestTask;
+}
+
+function showToolTip(task) {
+    var tooltip = document.getElementById("tooltip");
+    tooltip.innerHTML = task.name + "<br/>" + task.description;
+    tooltip.style.left = event.clientX;
+    tooltip.style.top = event.clientY + 20;
+    tooltip.style.display = "block";
+}
+
+function hideToolTip() {
+    tooltip.style.display="none";
+}
+
 function startGame() {
     var c = document.getElementById("canvas");
     var ctx = c.getContext("2d");
@@ -148,6 +186,8 @@ function startGame() {
     task1.completionGeneration = {wheat:1};
     task1.completionYears = 1;
     task1.unlock = null;
+    task1.name = "Farm";
+    task1.description = "Farm some resources";
 
     var task2 = {};
     task2.imageUrl = 'images/rock.png';
@@ -159,6 +199,8 @@ function startGame() {
     task2.completionGeneration = {stone:50};
     task2.completionYears = 5;
     task2.unlock = {task: task1, level:4, permanent:true}
+    task2.name = "rock";
+    task2.description = "Mining maybe?";
 
     var task3 = {};
     task3.imageUrl = 'images/farm2.jpg';
@@ -170,6 +212,8 @@ function startGame() {
     task3.completionGeneration = {wheat:2};
     task3.completionYears = 0.75;
     task3.unlock = {task: task2, level:1, permanent:false}
+    task3.name = "Better Farming";
+    task3.description = "Like if you are better at farming";
 
     game.alltasks = [task1, task2, task3];
 
@@ -181,61 +225,19 @@ function startGame() {
     window.requestAnimationFrame(loop)
 }
 
-
-
-var handleMouseClick = function(evt) {
-    var rect = canvas.getBoundingClientRect();
-    var x = event.clientX - rect.left;
-    var y = event.clientY - rect.top;
-
-    x = x - game.camtransx;
-    y = y - game.camtransy;
-
-    x = x / game.camscale;
-    y = y / game.camscale;
-
-    var clickedTask = null;
-    var closestClick = 25.1;
-    game.tasks.forEach(task => {
-       xd = task.x - x;
-       yd = task.y - y;
-       d = Math.sqrt(xd*xd+yd*yd)
-       if (d < closestClick) {
-           closestClick = d;
-           clickedTask = task;
-       }
-    });
-
+var handleMouseClick = function(e) {
+    var clickedTask = findClosestTask(e)
     doTask(clickedTask);
 }
 
 // show tooltip when mouse hovers over dot
 function handleMouseMove(e){
-    var rect = canvas.getBoundingClientRect();
-    var x = event.clientX - rect.left;
-    var y = event.clientY - rect.top;
+    var task = findClosestTask(e);
 
-    x = x - game.camtransx;
-    y = y - game.camtransy;
-
-    x = x / game.camscale;
-    y = y / game.camscale;
-
-    var clickedTask = null;
-    var closestClick = 25.1;
-    game.tasks.forEach(task => {
-        xd = task.x - x;
-        yd = task.y - y;
-        d = Math.sqrt(xd*xd+yd*yd)
-        if (d < closestClick) {
-            closestClick = d;
-            clickedTask = task;
-        }
-    });
-
-    if (clickedTask == null) {
-        // remove the tooltip
-    } else {
-        console.log(game.resources.wheat);
+    if (task) {
+        console.log("Yeah hovered");
+        showToolTip(task);
+    } else { // No task, hide tooltip
+        hideToolTip(task);
     }
 }
