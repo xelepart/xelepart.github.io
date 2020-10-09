@@ -69,7 +69,8 @@ var doTask = function(task) {
 }
 
 function sendMessage(text) {
-    console.log(text);
+    messageBlock = document.getElementById("messages")
+    messageBlock.innerHTML = text + "<br/>" + messageBlock.innerHTML;
 }
 
 function killPlayer(description) {
@@ -87,7 +88,7 @@ var update = function(elapsed) {
         var maxYearsElapsed = elapsed * GAMESPEED_RATIO;
         var remainingYears = game.activetask.def.completionYears - game.activetask.life.yearsWorked;
         var yearsElapsed = Math.min(maxYearsElapsed, remainingYears);
-
+        document.getElementById("age").innerHTML=Math.round(game.age * 10) / 10;
         // continue the active task...
         game.activetask.life.yearsWorked += yearsElapsed;
 
