@@ -1,4 +1,7 @@
-game = {resources:{},activetask:null}
+game = {resources:{},activetask:null,camscale:2,camtransx:-200,camtransy:-200}
+
+canvas = document.getElementById("canvas");
+ctx = canvas.getContext("2d");
 
 //GAMESPEED_RATIO = 1 / (5 * 60 * 1000)  // 1 year every 5 minutes in ms
 GAMESPEED_RATIO = 1 / (1 * 1000)  // 1 year every 1 seconds in ms
@@ -76,12 +79,17 @@ var update = function(elapsed) {
 }
 
 var draw = function() {
-    var canvas = document.getElementById("canvas");
-    var ctx = canvas.getContext("2d");
     canvas.width = window.innerWidth;
     canvas.height = window.innerHeight;
 
-    ctx.save();
+//    ctx.save();
+
+    ctx.fillStyle = "black";
+    ctx.fillRect(-10, -10, canvas.width+20, canvas.height+20);
+
+    ctx.translate(game.camtransx, game.camtransy);
+    ctx.scale(game.camscale, game.camscale);
+
 
     game.tasks.forEach(task => {
         var image = task.img;
@@ -111,7 +119,7 @@ var draw = function() {
         }
     })
 
-    ctx.restore();
+//    ctx.restore();
 }
 
 function loop(timestamp) {
@@ -126,14 +134,6 @@ function loop(timestamp) {
   window.requestAnimationFrame(loop)
 }
 var lastRender = 0
-
-function getMousePos(canvas, event) {
-    var rect = canvas.getBoundingClientRect();
-    return {
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top
-    };
-}
 
 function startGame() {
     var c = document.getElementById("canvas");
@@ -157,7 +157,7 @@ function startGame() {
     task2.repeatable = false;
     task2.passiveGeneration = {stone:1};
     task2.completionGeneration = {stone:50};
-    task2.completionYears = 1.5;
+    task2.completionYears = 5;
     task2.unlock = {task: task1, level:4, permanent:true}
 
     var task3 = {};
@@ -175,23 +175,67 @@ function startGame() {
 
     checkVisibleTasks();
 
-    canvas.addEventListener('click', function(evt) {
-        var mousePos = getMousePos(canvas, evt);
-        var clickedTask = null;
-        var closestClick = 25.1;
-        game.tasks.forEach(task => {
-            xd = task.x - mousePos.x;
-            yd = task.y - mousePos.y;
-            d = Math.sqrt(xd*xd+yd*yd)
-            if (d < closestClick) {
-                closestClick = d;
-                clickedTask = task;
-            }
-        });
-
-        doTask(clickedTask);
-
-    }, false);
+    canvas.addEventListener('click', handleMouseClick, false);
+    canvas.addEventListener('mousemove', handleMouseMove, false);
 
     window.requestAnimationFrame(loop)
+}
+
+
+
+var handleMouseClick = function(evt) {
+    var rect = canvas.getBoundingClientRect();
+    var x = event.clientX - rect.left;
+    var y = event.clientY - rect.top;
+
+    x = x - game.camtransx;
+    y = y - game.camtransy;
+
+    x = x / game.camscale;
+    y = y / game.camscale;
+
+    var clickedTask = null;
+    var closestClick = 25.1;
+    game.tasks.forEach(task => {
+       xd = task.x - x;
+       yd = task.y - y;
+       d = Math.sqrt(xd*xd+yd*yd)
+       if (d < closestClick) {
+           closestClick = d;
+           clickedTask = task;
+       }
+    });
+
+    doTask(clickedTask);
+}
+
+// show tooltip when mouse hovers over dot
+function handleMouseMove(e){
+    var rect = canvas.getBoundingClientRect();
+    var x = event.clientX - rect.left;
+    var y = event.clientY - rect.top;
+
+    x = x - game.camtransx;
+    y = y - game.camtransy;
+
+    x = x / game.camscale;
+    y = y / game.camscale;
+
+    var clickedTask = null;
+    var closestClick = 25.1;
+    game.tasks.forEach(task => {
+        xd = task.x - x;
+        yd = task.y - y;
+        d = Math.sqrt(xd*xd+yd*yd)
+        if (d < closestClick) {
+            closestClick = d;
+            clickedTask = task;
+        }
+    });
+
+    if (clickedTask == null) {
+        // remove the tooltip
+    } else {
+        console.log(game.resources.wheat);
+    }
 }
