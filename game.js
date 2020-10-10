@@ -1,5 +1,5 @@
 game = {alltasks:{},startage:18,maxage:30}
-player = {resources:{},activetask:null,history:{camscale:2,camtransx:-500,camtransy:-300}}
+player = {tasks:{},resources:{},activetaskid:null,history:{camscale:2,camtransx:-500,camtransy:-300}}
 
 canvas = document.getElementById("canvas");
 ctx = canvas.getContext("2d");
@@ -73,12 +73,12 @@ var completeTask = function(task) {
 
 var doTask = function(task) {
     if (task === null) return;
-    if (player.activetask !== null) return;
+    if (player.activetaskid !== null) return;
     if (!task.def.repeatable && task.level > 0) return;
 
     // if we can't do this task for some other reason, return? Not visible (cheaters!)? Not enough money? (need a UI indicator for that when i wrote this...)
 
-    player.activetask = task;
+    player.activetaskid = task.def.taskid;
     task.life.yearsWorked = 0;
 }
 
@@ -102,7 +102,7 @@ function killPlayer(description) {
     });
 
     player.age = game.startage;
-    player.activetask = null;
+    player.activetaskid = null;
     player.resources = {};
     checkVisibleTasks();
 
@@ -129,17 +129,18 @@ function refreshStats()
 }
 
 var update = function(elapsed) {
-    if (player.activetask) { // if no active task, we don't update the game! NOT IDLE!
+    if (player.activetaskid) { // if no active task, we don't update the game! NOT IDLE!
+        var playertask = game.alltasks[player.activetaskid];
         var maxYearsElapsed = elapsed * GAMESPEED_RATIO;
-        var remainingYears = computeCompletionYears(player.activetask) - player.activetask.life.yearsWorked;
+        var remainingYears = computeCompletionYears(playertask) - playertask.life.yearsWorked;
         var yearsElapsed = Math.min(maxYearsElapsed, remainingYears);
 
         // continue the active task...
-        player.activetask.life.yearsWorked += yearsElapsed;
+        playertask.life.yearsWorked += yearsElapsed;
 
-        if (computeCompletionYears(player.activetask) == player.activetask.life.yearsWorked) {
-            completeTask(player.activetask);
-            player.activetask = null;
+        if (computeCompletionYears(playertask) == playertask.life.yearsWorked) {
+            completeTask(playertask);
+            player.activetaskid = null;
         }
 
         // not in V1, but this is probably where automated tasks would go?
@@ -189,7 +190,7 @@ var draw = function() {
 
         ctx.drawImage(image, task.history.x-25, task.history.y-25, 50, 50);
 
-        if (task = player.activetask) {
+        if (task.def.taskid === player.activetaskid) {
             var pctComplete = task.life.yearsWorked / computeCompletionYears(task);
 
             ctx.globalAlpha = 0.3
@@ -277,8 +278,9 @@ function computeCompletionYears(task) {
 
 function registerTaskDefinition(taskDefinition) {
     var task = {def:taskDefinition,life:{level:0},history:{maxlevel:0}};
-    console.log(taskDefinition.taskid);
     game.alltasks[taskDefinition.taskid] = task;
+    var playertask = {life:task.life, history:task.history};
+    player.tasks[taskDefinition.taskid] = playertask;
 }
 
 function startGame() {
