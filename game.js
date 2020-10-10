@@ -305,29 +305,29 @@ function startGame() {
         description:"Farm some resources",
     });
 
-    var task2 = {};
-    task2.taskid = 2;
-    task2.imageUrl = 'images/stone.png';
-    task2.repeatable = false;
-    task2.completionGeneration = {stone:50};
-    task2.completionYears = 5;
-    task2.unlock = {taskid: 1, level:4, permanent:true};
-    task2.name = "Remove Stones";
-    task2.description = "These rocks are messin' with yer farmin'! Git!";
+    registerTaskDefinition({
+        taskid:2,
+        imageUrl:'images/stone.png',
+        repeatable:false,
+        passiveGeneration:null,
+        completionGeneration:{stone:50},
+        completionYears:5,
+        unlock:{taskid: 1, level:4, permanent:true},
+        name:"Remove Stones",
+        description:"These rocks are messin' with yer farmin'! Git!",
+    });
 
-    var task3 = {};
-    task3.taskid = 3;
-    task3.imageUrl = 'images/farm2.png';
-    task3.repeatable = true;
-    task3.passiveGeneration = {wheat:0.5};
-    task3.completionGeneration = {wheat:2};
-    task3.completionYears = 0.75;
-    task3.unlock = {taskid: 2, level:1, permanent:false};
-    task3.name = "Better Farming";
-    task3.description = "Like if you are better at farming";
-
-    registerTaskDefinition(task2);
-    registerTaskDefinition(task3);
+    registerTaskDefinition({
+        taskid:3,
+        imageUrl:'images/farm2.png',
+        repeatable:true,
+        passiveGeneration:{wheat:0.5},
+        completionGeneration:{wheat:2},
+        completionYears:0.75,
+        unlock:{taskid:2, level:1, permanent:false},
+        name:"Better Farming",
+        description:"Like if you are better at farming",
+    });
 
     killPlayer("Welcome to the game! One day, we might save progress, but right now you get to start at the start every time. But that's probably okay, the game just ain't that long.");
 
