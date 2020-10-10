@@ -1,4 +1,4 @@
-game = {alltasks:[],startage:18,maxage:30}
+game = {alltasks:{},startage:18,maxage:30}
 player = {resources:{},activetask:null,history:{camscale:2,camtransx:-500,camtransy:-300}}
 
 canvas = document.getElementById("canvas");
@@ -15,8 +15,8 @@ var generateResource = function(task, resourceName, rawAmount) {
 }
 
 var processPassiveTask = function(task, yearsElapsed) {
-    for (resource in task.passiveGeneration) {
-        player.resources[resourceName] += generateResource(task, resource, task.def.passiveGeneration[resource]*yearsElapsed);
+    for (resource in task.def.passiveGeneration) {
+        player.resources[resource] += generateResource(task, resource, task.def.passiveGeneration[resource]*yearsElapsed);
     }
 }
 
@@ -27,14 +27,16 @@ var checkVisibleTasks = function() {
 
     hoveredTaskStillVisible = false;
 
-    game.alltasks.forEach(task => {
+    Object.entries(game.alltasks).forEach(e => {
+        var task = e[1];
+
         var completed = !task.def.repeatable && task.life.level > 0;
 
         if (completed) return;
 
         var freebie = task.def.unlock === null;
         var active = task.life.level > 0;
-        var prereqMet = task.def.unlock !== null && task.def.unlock.def.realtask.life.level >= task.def.unlock.level;
+        var prereqMet = task.def.unlock !== null && game.alltasks[task.def.unlock.taskid].life.level >= task.def.unlock.level;
         var prereqPreviouslyMet = task.def.unlock !== null && task.def.unlock.permanent && task.history.seen;
 
         if (freebie || active || prereqMet || prereqPreviouslyMet) {
@@ -42,8 +44,8 @@ var checkVisibleTasks = function() {
             if (task === hoveredOverTask) hoveredTaskStillVisible = true;
             if (!task.history.seen) {
                 task.history.seen = true;
-                task.history.x = task.def.unlock === null ? nextMiscX : task.def.unlock.def.realtask.history.x + 100;
-                task.history.y = task.def.unlock === null ? (nextMiscY += 100) : task.def.unlock.def.realtask.history.y;
+                task.history.x = task.def.unlock === null ? nextMiscX : game.alltasks[task.def.unlock.taskid].history.x + 100;
+                task.history.y = task.def.unlock === null ? (nextMiscY += 100) : game.alltasks[task.def.unlock.taskid].history.y;
             }
         }
     });
@@ -88,7 +90,9 @@ function sendMessage(text) {
 function killPlayer(description) {
     sendMessage(description);
 
-    game.alltasks.forEach(task => {
+    Object.entries(game.alltasks).forEach(e => {
+        var task = e[1];
+
         if (task.def.repeatable) {
             task.history.maxlevel = Math.max(task.history.maxlevel||0, task.life.level||0);
         } else {
@@ -273,47 +277,51 @@ function computeCompletionYears(task) {
 
 function registerTaskDefinition(taskDefinition) {
     var task = {def:taskDefinition,life:{level:0},history:{maxlevel:0}};
-    taskDefinition.realtask = task; // CIRCULAR WHEE (we should make these things like real classes i suspect)
-    game.alltasks.push(task);
+    console.log(taskDefinition.taskid);
+    game.alltasks[taskDefinition.taskid] = task;
 }
 
 function startGame() {
     var c = document.getElementById("canvas");
     var ctx = c.getContext("2d");
 
-    var task1 = {};
-    task1.imageUrl = 'images/farm1.png';
-    task1.repeatable = true;
-    task1.completionGeneration = {wheat:1};
-    task1.completionYears = 1;
-    task1.unlock = null;
-    task1.name = "Farm";
-    task1.description = "Farm some resources";
+    registerTaskDefinition({
+        taskid:1,
+        imageUrl:'images/farm1.png',
+        repeatable:true,
+        passiveGeneration:{wheat:0.1},
+        completionGeneration:{wheat:1},
+        completionYears:1,
+        unlock:null,
+        name:"Farm",
+        description:"Farm some resources",
+    });
 
     var task2 = {};
+    task2.taskid = 2;
     task2.imageUrl = 'images/stone.png';
     task2.repeatable = false;
     task2.completionGeneration = {stone:50};
     task2.completionYears = 5;
-    task2.unlock = {def: task1, level:4, permanent:true}
+    task2.unlock = {taskid: 1, level:4, permanent:true};
     task2.name = "Remove Stones";
     task2.description = "These rocks are messin' with yer farmin'! Git!";
 
     var task3 = {};
+    task3.taskid = 3;
     task3.imageUrl = 'images/farm2.png';
     task3.repeatable = true;
     task3.passiveGeneration = {wheat:0.5};
     task3.completionGeneration = {wheat:2};
     task3.completionYears = 0.75;
-    task3.unlock = {def: task2, level:1, permanent:false}
+    task3.unlock = {taskid: 2, level:1, permanent:false};
     task3.name = "Better Farming";
     task3.description = "Like if you are better at farming";
 
-    registerTaskDefinition(task1);
     registerTaskDefinition(task2);
     registerTaskDefinition(task3);
 
-    killPlayer("Welcome to the game! Apologies about this annoying thing every time you start, we'll either get some save state or move the story out of alerts soon. Promise.");
+    killPlayer("Welcome to the game! One day, we might save progress, but right now you get to start at the start every time. But that's probably okay, the game just ain't that long.");
 
     checkVisibleTasks();
 
