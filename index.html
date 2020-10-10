@@ -2,12 +2,13 @@
 <head><link rel="stylesheet" href="game.css"></head>
 <body style="margin:0;display:flex;">
 <div id="canvasdiv" style="flex:1"><canvas id="canvas" style="z-index: 1;"></canvas></div>
-<div id="UI" style="z-index: 4;width:300px;height:100%;top:250px:px;background-color:grey;border: 5px solid honeydew; border-radius: 10px;padding:20px;display:black">
+<div id="UI" style="z-index: 4;width:300px;top:250px:px;background-color:grey;border: 5px solid honeydew; border-radius: 10px;padding:20px;display:black">
 	<div id="statsblock" style="color: cyan;">
-		<span id="GoldBlock"><span id="gold">100</span><span style="color:yellow"> gold</span></span>
-		<span id="AgeBlock"><span id="age">1</span><span id="agelabel" style="color:lightgreen"> years old</span></span>
+		<div id="AgeBlock"><span id="age">1</span><span id="agelabel" style="color:lightgreen"> years old</span></div>
+		<div style="color:Chartreuse">Stuff:</div>
+		<span id="MiscStats">A whole lotta nothin'!</span>
 	</div>
-	<div id="messages" style="color:White; border-top:solid 1px black;overflow: scroll;height: 100px">
+	<div id="messages" style="color:White; border-top:solid 1px black;overflow: scroll;height: 90%">
 		Hello! This is where messages will show up!
 	</div>
 </div>

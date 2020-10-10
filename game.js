@@ -1,4 +1,5 @@
-game = {alltasks:[],resources:{},activetask:null,camscale:1,camtransx:0,camtransy:0,age:18,maxage:25}
+game = {alltasks:[],startage:20,maxage:27}
+player = {resources:{},activetask:null,history:{camscale:2,camtransx:-500,camtransy:-300}}
 
 canvas = document.getElementById("canvas");
 ctx = canvas.getContext("2d");
@@ -7,10 +8,19 @@ ctx = canvas.getContext("2d");
 GAMESPEED_RATIO = 1 / (1 * 1000)  // 1 year every 1 seconds in ms
 
 var generateResource = function(task, resourceName, rawAmount) {
-    if (!game.resources[resourceName]) {
-        game.resources[resourceName] = 0;
+    if (!player.resources[resourceName]) {
+        player.resources[resourceName] = 0;
     }
-    game.resources[resourceName] += rawAmount; // this should get complicated with groundhog meta?
+    console.log(resourceName);
+    console.log(rawAmount);
+    console.log(task);
+    console.log(task.history);
+    console.log(task.history.maxlevel);
+    console.log(1.1^task.history.maxlevel);
+    console.log(rawAmount*Math.pow(1.1,task.history.maxlevel));
+    console.log(player.resources[resourceName]);
+    player.resources[resourceName] += rawAmount*Math.pow(1.1,task.history.maxlevel); // this should get complicated with groundhog meta?
+    console.log(player.resources[resourceName]);
 }
 
 var processPassiveTask = function(task, yearsElapsed) {
@@ -42,6 +52,9 @@ var checkVisibleTasks = function() {
             }
         }
     });
+
+    hoveredOverTask = null;
+    hideToolTip();
 }
 
 var completeTask = function(task) {
@@ -59,18 +72,18 @@ var completeTask = function(task) {
 
 var doTask = function(task) {
     if (task === null) return;
-    if (game.activetask !== null) return;
+    if (player.activetask !== null) return;
     if (!task.def.repeatable && task.level > 0) return;
 
     // if we can't do this task for some other reason, return? Not visible (cheaters!)? Not enough money? (need a UI indicator for that when i wrote this...)
 
-    game.activetask = task;
+    player.activetask = task;
     task.life.yearsWorked = 0;
 }
 
 function sendMessage(text) {
     messageBlock = document.getElementById("messages")
-    messageBlock.innerHTML = text + "<br/>" + messageBlock.innerHTML;
+    messageBlock.innerHTML = "<br/>" + text + "<br/>" + messageBlock.innerHTML;
 }
 
 function killPlayer(description) {
@@ -80,9 +93,10 @@ function killPlayer(description) {
         task.history.maxlevel = Math.max(task.history.maxlevel||0, task.life.level||0);
         task.life.level = 0;
     });
-    game.age = 18;
-    game.activetask = null;
 
+    player.age = game.startage;
+    player.activetask = null;
+    player.resources = {};
     checkVisibleTasks();
 
     refreshStats();
@@ -90,26 +104,35 @@ function killPlayer(description) {
 
 function refreshStats()
 {
-    document.getElementById("age").innerHTML=Math.round(game.age * 10) / 10;
-    if (game.maxage - game.age > 5) {
+    var miscStatsInnerHTML = "";
+
+    document.getElementById("age").innerHTML=Math.round(player.age * 10) / 10;
+    if (game.maxage - player.age > 5) {
         document.getElementById("agelabel").style.color="lightgreen";
     } else {
         document.getElementById("agelabel").style.color="pink";
     }
 
+    // how should we order these? Most recently gained? Manual list? Alphabetical? Most-owned?
+    for (resource in player.resources) {
+        miscStatsInnerHTML += resource + ": " + Math.round(player.resources[resource] * 10) / 10 + "</br>";
+    }
+    if (miscStatsInnerHTML == "") miscStatsInnerHTML = "A whole lotta nothin'!";
+    document.getElementById("MiscStats").innerHTML = miscStatsInnerHTML;
 }
-var update = function(elapsed) {
-    if (game.activetask) { // if no active task, we don't update the game! NOT IDLE!
-        var maxYearsElapsed = elapsed * GAMESPEED_RATIO;
-        var remainingYears = game.activetask.def.completionYears - game.activetask.life.yearsWorked;
-        var yearsElapsed = Math.min(maxYearsElapsed, remainingYears);
-        refreshStats()
-        // continue the active task...
-        game.activetask.life.yearsWorked += yearsElapsed;
 
-        if (game.activetask.def.completionYears == game.activetask.life.yearsWorked) {
-            completeTask(game.activetask);
-            game.activetask = null;
+var update = function(elapsed) {
+    if (player.activetask) { // if no active task, we don't update the game! NOT IDLE!
+        var maxYearsElapsed = elapsed * GAMESPEED_RATIO;
+        var remainingYears = player.activetask.def.completionYears - player.activetask.life.yearsWorked;
+        var yearsElapsed = Math.min(maxYearsElapsed, remainingYears);
+
+        // continue the active task...
+        player.activetask.life.yearsWorked += yearsElapsed;
+
+        if (player.activetask.def.completionYears == player.activetask.life.yearsWorked) {
+            completeTask(player.activetask);
+            player.activetask = null;
         }
 
         // not in V1, but this is probably where automated tasks would go?
@@ -123,12 +146,13 @@ var update = function(elapsed) {
             }
         });
 
-        game.age += yearsElapsed;
+        player.age += yearsElapsed;
 
-        if (game.age > game.maxage) {
-            killPlayer("Oh no! You died of old age! Blah blah blah story wtf you're 18 again");
+        if (player.age > game.maxage) {
+            killPlayer("Oh no! You died of old age! Blah blah blah story wtf you're " + game.startage + " again");
         }
     }
+    refreshStats()
 }
 
 var canvasdiv = document.getElementById("canvasdiv");
@@ -141,8 +165,8 @@ var draw = function() {
     ctx.fillStyle = "#222222";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.translate(game.camtransx, game.camtransy);
-    ctx.scale(game.camscale, game.camscale);
+    ctx.translate(player.history.camtransx, player.history.camtransy);
+    ctx.scale(player.history.camscale, player.history.camscale);
 
     game.tasks.forEach(task => {
         var image = task.def.img;
@@ -158,17 +182,17 @@ var draw = function() {
 
         ctx.drawImage(image, task.history.x-25, task.history.y-25, 50, 50);
 
-        if (task = game.activetask) {
+        if (task = player.activetask) {
             var pctComplete = task.life.yearsWorked / task.def.completionYears;
 
-            ctx.globalAlpha=0.3
+            ctx.globalAlpha = 0.3
             ctx.beginPath();
             ctx.moveTo(task.history.x, task.history.y);
             ctx.lineTo(task.history.x, task.history.y + 25);
             ctx.arc(task.history.x, task.history.y, 25, -0.5*Math.PI, 2 * Math.PI * pctComplete - 0.5*Math.PI, true);
             ctx.lineTo(task.history.x, task.history.y);
             ctx.fill();
-            ctx.globalAlpha=1
+            ctx.globalAlpha = 1
         }
     })
 //    ctx.restore();
@@ -192,11 +216,11 @@ function findClosestTask(evt) {
     var x = event.clientX - rect.left;
     var y = event.clientY - rect.top;
 
-    x = x - game.camtransx;
-    y = y - game.camtransy;
+    x = x - player.history.camtransx;
+    y = y - player.history.camtransy;
 
-    x = x / game.camscale;
-    y = y / game.camscale;
+    x = x / player.history.camscale;
+    y = y / player.history.camscale;
 
     var closestTask = null;
     var closestClick = 25.1;
@@ -289,6 +313,6 @@ function handleMouseMove(e){
     if (hoveredOverTask) {
         showToolTip(hoveredOverTask);
     } else { // No task, hide tooltip
-        hideToolTip(hoveredOverTask);
+        hideToolTip();
     }
 }
