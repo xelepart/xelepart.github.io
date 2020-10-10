@@ -72,6 +72,12 @@ var completeTask = function(task) {
     }
 
     task.life.level++;
+
+    if (!task.history.evercompleted) {
+        sendMessage(task.def.completionstory, true);
+    }
+
+    task.history.evercompleted = true;
     // the important part of a completed task is checking if new tasks are unlocked
     // (one day this might happen outside of task completion/game init 'cause who tf knows what would cause unlocks? maybe?)
     checkVisibleTasks();
@@ -88,13 +94,23 @@ var doTask = function(task) {
     task.life.yearsWorked = 0;
 }
 
-function sendMessage(text) {
+function sendMessage(text, popup) {
+    if (popup) alert(text + "    (sorry popup is alert, working on it)")
     messageBlock = document.getElementById("messages")
     messageBlock.innerHTML = "<br/>" + text + "<br/>" + messageBlock.innerHTML;
 }
 
+function resetPlayer() {
+    player.age = game.startage;
+    player.activetaskid = null;
+    player.resources = {};
+    checkVisibleTasks();
+
+    refreshStats();
+}
+
 function killPlayer(description) {
-    sendMessage(description);
+    sendMessage(description, true);
 
     Object.entries(game.alltasks).forEach(e => {
         var task = e[1];
@@ -107,12 +123,7 @@ function killPlayer(description) {
         task.life.level = 0;
     });
 
-    player.age = game.startage;
-    player.activetaskid = null;
-    player.resources = {};
-    checkVisibleTasks();
-
-    refreshStats();
+    resetPlayer();
 }
 
 function refreshStats()
@@ -255,7 +266,7 @@ var tooltip = document.getElementById("tooltip");
 function updateTooltipText() {
     if (!updateTooltipText) hideToolTip();
     tooltip.innerHTML = hoveredOverTask.def.name + "<br/>"
-                   + hoveredOverTask.def.description + "<br/>"
+                   + (hoveredOverTask.history.evercompleted ? hoveredOverTask.def.description : hoveredOverTask.def.predescription) + "<br/>"
                    + "Takes " + Math.round(computeCompletionYears(hoveredOverTask)*10)/10 + " years<br/>"
                    + (hoveredOverTask.def.passiveGeneration ? (hoveredOverTask.life.level > 0 ? "Currently passively producing " : "Upon completion would start to passively produce ") + "the following per year...<br/>" + Object.entries(hoveredOverTask.def.passiveGeneration).map(e => e[0] + ": " + (Math.round(generateResource(hoveredOverTask, e[0], e[1])*10)/10)) + "<br/>" : "")
                    + (hoveredOverTask.def.completionGeneration ? "Upon active completion, will produce...<br/>" + Object.entries(hoveredOverTask.def.completionGeneration).map(e => e[0] + ": " + (Math.round(generateResource(hoveredOverTask, e[0], e[1])*10)/10)) + "<br/>" : "")
@@ -297,12 +308,13 @@ function startGame() {
         taskid:1,
         imageUrl:'images/farm1.png',
         repeatable:true,
-        passiveGeneration:{wheat:0.1},
         completionGeneration:{wheat:1},
         completionYears:1,
         unlock:null,
-        name:"Farm",
-        description:"Farm some resources",
+        name:"Unkept Farm",
+        predescription:"You woke up this morning, and had no real memories of your life before today. You...get the sense you are a farmer? And looking out the window, it looks like there's a farm there.",
+        completionstory:"Success! You got wheat! One whole wheat! What's wheat come in, anyway? Bushels? Pounds? Cartloads? These are the conversations I have with my friends now.",
+        description:"Work those fields some more.",
     });
 
     registerTaskDefinition({
@@ -314,7 +326,9 @@ function startGame() {
         completionYears:5,
         unlock:{taskid: 1, level:4, permanent:true},
         name:"Remove Stones",
-        description:"These rocks are messin' with yer farmin'! Git!",
+        predescription:"Now that you've got some experience farming, you realize rocks kinda get in the way. Like. Really in the way. You're thinking maybe you should remove them. It'll be a lot of work, but you're pretty sure it'll pay off.",
+        completionstory:"Wow, that was rough. There was this one boulder you had to dig around, took over a month and your hands were super rough. Then you had to break it up to move it in pieces. But now you have this really nice looking field. And, like. A big pile of rocks. So, that's cool.",
+        description:"Not this time, little rocks. We know your game. Now, git!",
     });
 
     registerTaskDefinition({
@@ -325,8 +339,10 @@ function startGame() {
         completionGeneration:{wheat:2},
         completionYears:0.75,
         unlock:{taskid:2, level:1, permanent:false},
-        name:"Better Farming",
-        description:"Like if you are better at farming",
+        name:"Actual Farm",
+        predescription:"Well, I'll be gosh darned if this isn't the prettiest farm you've ever seen. Planting lines as straight as an arrow. No huge boulders in the way. Not at all half rocks instead of plants. Really, quite a sight to see. I bet this'd look real cool to a bird. Yeah, there's probably one bird up in that flock of birds overhead is all like 'wow i see a cool pattern down there guys, do you see that pattern? hey guys it's a pattern, look down, it's so cool!'",
+        completionstory:"Well, not only did this generate significantly more wheat (like, literally twice as much wheat!) than your previous farm did, now that you've set it up and harvested once, it seems to just keep making wheat! Like, even more than last year, and even when you're not paying attention to it! So cool. I'm really glad you removed those rocks. Really smart idea. You should be a tactician, I think you'd be great at it. (That's definitely not foreshadowing, nope, absolutely not, no way.)",
+        description:"Such farming. So wheat.",
     });
 
     killPlayer("Welcome to the game! One day, we might save progress, but right now you get to start at the start every time. But that's probably okay, the game just ain't that long.");
