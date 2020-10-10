@@ -7,7 +7,7 @@ ctx = canvas.getContext("2d");
 //GAMESPEED_RATIO = 1 / (5 * 60 * 1000)  // 1 year every 5 minutes in ms
 GAMESPEED_RATIO = 1 / (1 * 1000)  // 1 year every 1 seconds in ms
 
-var generateResource = function(task, resourceName, rawAmount) {
+var computeResourceGeneration = function(task, resourceName, rawAmount) {
     if (!player.resources[resourceName]) {
         player.resources[resourceName] = 0;
     }
@@ -19,7 +19,7 @@ var processPassiveTask = function(task, yearsElapsed) {
         if (!player.resources[resource]) {
             player.resources[resource] = 0;
         }
-        player.resources[resource] += generateResource(task, resource, task.def.passiveGeneration[resource]*yearsElapsed);
+        player.resources[resource] += computeResourceGeneration(task, resource, task.def.passiveGeneration[resource]*yearsElapsed);
     }
 }
 
@@ -39,7 +39,7 @@ var checkVisibleTasks = function() {
 
         var freebie = task.def.unlock === null;
         var active = task.life.level > 0;
-        var prereqMet = task.def.unlock !== null && game.alltasks[task.def.unlock.taskid].life.level >= task.def.unlock.level;
+        var prereqMet = task.def.unlock !== null && ((task.def.unlock.taskid && game.alltasks[task.def.unlock.taskid].life.level >= task.def.unlock.level) || (task.def.unlock.resourceName && player.resources[task.def.unlock.resourceName] >= task.def.unlock.amount));
         var prereqPreviouslyMet = task.def.unlock !== null && task.def.unlock.permanent && task.history.seen;
 
         if (freebie || active || prereqMet || prereqPreviouslyMet) {
@@ -47,8 +47,8 @@ var checkVisibleTasks = function() {
             if (task === hoveredOverTask) hoveredTaskStillVisible = true;
             if (!task.history.seen) {
                 task.history.seen = true;
-                task.history.x = task.def.unlock === null ? nextMiscX : game.alltasks[task.def.unlock.taskid].history.x + 100;
-                task.history.y = task.def.unlock === null ? (nextMiscY += 100) : game.alltasks[task.def.unlock.taskid].history.y;
+                task.history.x = (task.def.unlock === null || !task.def.unlock.taskid) ? nextMiscX : game.alltasks[task.def.unlock.taskid].history.x + 100;
+                task.history.y = (task.def.unlock === null || !task.def.unlock.taskid) ? (nextMiscY += 100) : game.alltasks[task.def.unlock.taskid].history.y;
             }
         }
     });
@@ -67,7 +67,7 @@ var completeTask = function(task) {
             if (!player.resources[resource]) {
                 player.resources[resource] = 0;
             }
-            player.resources[resource] += generateResource(task, resource, task.def.completionGeneration[resource]);
+            player.resources[resource] += computeResourceGeneration(task, resource, task.def.completionGeneration[resource]);
         }
     }
 
@@ -88,6 +88,27 @@ var doTask = function(task) {
     if (player.activetaskid !== null) return;
     if (!task.def.repeatable && task.level > 0) return;
 
+    computeCompletionCost
+    if (task.def.completionCosts) {
+        var missingResources = false;
+        Object.entries(task.def.completionCosts).forEach((e)=> {
+            resource = e[0];
+            amount = e[1];
+            if ((player.resources[resource]||0) < amount) {
+                missingResources = true;
+            }
+        });
+        if (missingResources) {
+            sendMessage("Not enough resources!", false);
+            return;
+        } else {
+            Object.entries(task.def.completionCosts).forEach((e)=> {
+                resource = e[0];
+                amount = e[1];
+                player.resources[resource] -= amount;
+            });
+        }
+    }
     // if we can't do this task for some other reason, return? Not visible (cheaters!)? Not enough money? (need a UI indicator for that when i wrote this...)
 
     player.activetaskid = task.def.taskid;
@@ -95,7 +116,7 @@ var doTask = function(task) {
 }
 
 function sendMessage(text, popup) {
-    if (popup) alert(text + "    (sorry popup is alert, working on it)")
+//    if (popup) alert(text + "    (sorry popup is alert, working on it)")
     messageBlock = document.getElementById("messages")
     messageBlock.innerHTML = "<br/>" + text + "<br/>" + messageBlock.innerHTML;
 }
@@ -268,14 +289,16 @@ function updateTooltipText() {
     tooltip.innerHTML = hoveredOverTask.def.name + "<br/>"
                    + (hoveredOverTask.history.evercompleted ? hoveredOverTask.def.description : hoveredOverTask.def.predescription) + "<br/>"
                    + "Takes " + Math.round(computeCompletionYears(hoveredOverTask)*10)/10 + " years<br/>"
-                   + (hoveredOverTask.def.passiveGeneration ? (hoveredOverTask.life.level > 0 ? "Currently passively producing " : "Upon completion would start to passively produce ") + "the following per year...<br/>" + Object.entries(hoveredOverTask.def.passiveGeneration).map(e => e[0] + ": " + (Math.round(generateResource(hoveredOverTask, e[0], e[1])*10)/10)) + "<br/>" : "")
-                   + (hoveredOverTask.def.completionGeneration ? "Upon active completion, will produce...<br/>" + Object.entries(hoveredOverTask.def.completionGeneration).map(e => e[0] + ": " + (Math.round(generateResource(hoveredOverTask, e[0], e[1])*10)/10)) + "<br/>" : "")
+                   + (hoveredOverTask.def.completionCosts ? "Doing this would cost...<br/>" + Object.entries(hoveredOverTask.def.completionCosts).map(e => e[0] + ": " + (Math.round(computeCompletionCost(hoveredOverTask, e[1])*10)/10)) + "<br/>" : "")
+                   + (hoveredOverTask.def.passiveGeneration ? (hoveredOverTask.life.level > 0 ? "Currently passively producing " : "Upon completion would start to passively produce ") + "the following per year...<br/>" + Object.entries(hoveredOverTask.def.passiveGeneration).map(e => e[0] + ": " + (Math.round(computeResourceGeneration(hoveredOverTask, e[0], e[1])*10)/10)) + "<br/>" : "")
+                   + (hoveredOverTask.def.completionGeneration ? "Upon active completion, will produce...<br/>" + Object.entries(hoveredOverTask.def.completionGeneration).map(e => e[0] + ": " + (Math.round(computeResourceGeneration(hoveredOverTask, e[0], e[1])*10)/10)) + "<br/>" : "")
                    + ((hoveredOverTask.life.level===0 && hoveredOverTask.history.maxlevel===0) ? "<br/>Is " + (hoveredOverTask.def.repeatable ? "" : "not ") + " repeatable after first completion.<br/>" : "");
    // things to maybe add:
    // "Will unlock..." ? (not sure i want this in the tooltip, honestly)
    // How much passive it would produce if you leveled it up. (also: passives should go up with life.level?)
    // Highest level you've ever had.
    // Current level.
+   // If it's the active (or automated) task, say that instead of what it would cost/etc?
 }
 
 function showToolTip() {
@@ -293,11 +316,29 @@ function computeCompletionYears(task) {
     return task.def.completionYears * Math.pow(0.99,task.history.maxlevel);
 }
 
+function computeCompletionCost(task, amount) {
+    return amount * Math.pow(0.97,task.history.maxlevel);
+}
+
 function registerTaskDefinition(taskDefinition) {
+    if (game.alltasks[taskDefinition.taskid]) {
+        alert("Game definition invalid: taskid " + taskDefinition.taskid + " was defined twice. (Please contact the devs and report this!)");
+        return;
+    }
+
     var task = {def:taskDefinition,life:{level:0},history:{maxlevel:0}};
     game.alltasks[taskDefinition.taskid] = task;
     var playertask = {life:task.life, history:task.history};
     player.tasks[taskDefinition.taskid] = playertask;
+}
+
+function verifyTasks() {
+    Object.entries(game.alltasks).forEach(e => {
+        var task = e[1];
+        if (task.def.unlock && task.def.unlock.taskid && !game.alltasks[task.def.unlock.taskid]) alert("Game definition invalid: Task " + task.taskid + " refers to non-existent task " + task.def.unlock.taskid + " for an unlock prerequisite. (Please contact the devs and report this!)");
+        // other things to check: Task's unlock resoures are generated somewhere? (not trying to solve the graph, just sanity check for typos?)
+        return;
+    });
 }
 
 function startGame() {
@@ -305,9 +346,11 @@ function startGame() {
     var ctx = c.getContext("2d");
 
     registerTaskDefinition({
-        taskid:1,
+        taskid:"farm1",
         imageUrl:'images/farm1.png',
         repeatable:true,
+        completionCosts:null,
+        passiveGeneration:null,
         completionGeneration:{wheat:1},
         completionYears:1,
         unlock:null,
@@ -318,13 +361,14 @@ function startGame() {
     });
 
     registerTaskDefinition({
-        taskid:2,
+        taskid:"removestone",
         imageUrl:'images/stone.png',
         repeatable:false,
+        completionCosts:null,
         passiveGeneration:null,
         completionGeneration:{stone:50},
         completionYears:5,
-        unlock:{taskid: 1, level:4, permanent:true},
+        unlock:{taskid: "farm1", level:4, permanent:true},
         name:"Remove Stones",
         predescription:"Now that you've got some experience farming, you realize rocks kinda get in the way. Like. Really in the way. You're thinking maybe you should remove them. It'll be a lot of work, but you're pretty sure it'll pay off.",
         completionstory:"Wow, that was rough. There was this one boulder you had to dig around, took over a month and your hands were super rough. Then you had to break it up to move it in pieces. But now you have this really nice looking field. And, like. A big pile of rocks. So, that's cool.",
@@ -332,20 +376,56 @@ function startGame() {
     });
 
     registerTaskDefinition({
-        taskid:3,
+        taskid:"farm2",
         imageUrl:'images/farm2.png',
         repeatable:true,
+        completionCosts:null,
         passiveGeneration:{wheat:0.5},
         completionGeneration:{wheat:2},
         completionYears:0.75,
-        unlock:{taskid:2, level:1, permanent:false},
+        unlock:{taskid:"removestone", level:1, permanent:false},
         name:"Actual Farm",
         predescription:"Well, I'll be gosh darned if this isn't the prettiest farm you've ever seen. Planting lines as straight as an arrow. No huge boulders in the way. Not at all half rocks instead of plants. Really, quite a sight to see. I bet this'd look real cool to a bird. Yeah, there's probably one bird up in that flock of birds overhead is all like 'wow i see a cool pattern down there guys, do you see that pattern? hey guys it's a pattern, look down, it's so cool!'",
         completionstory:"Well, not only did this generate significantly more wheat (like, literally twice as much wheat!) than your previous farm did, now that you've set it up and harvested once, it seems to just keep making wheat! Like, even more than last year, and even when you're not paying attention to it! So cool. I'm really glad you removed those rocks. Really smart idea. You should be a tactician, I think you'd be great at it. (That's definitely not foreshadowing, nope, absolutely not, no way.)",
         description:"Such farming. So wheat.",
     });
 
+    registerTaskDefinition({
+        taskid:"sellwheat",
+        imageUrl:'images/sell.png',
+        repeatable:true,
+        passiveGeneration:null,
+        completionCosts:{wheat:25},
+        completionGeneration:{gold:10},
+        completionYears:0.5,
+        unlock:{resourceName:"wheat", amount:10, permanent:true},
+        name:"Sell Wheat",
+        predescription:"Okay, you're starting to build up some wheat. There's probably a merchant in the city willing to take a cartload off your hands.",
+        completionstory:"It was a long, dusty road to the city, but you found a merchant looking for wheat! What luck!",
+        description:"Sell that wheat!",
+    });
+
+    verifyTasks();
+
     killPlayer("Welcome to the game! One day, we might save progress, but right now you get to start at the start every time. But that's probably okay, the game just ain't that long.");
+
+    if (false) {
+        player.resources.test=100;
+        registerTaskDefinition({
+            taskid:"dev",
+            imageUrl:'images/dev.png',
+            repeatable:true,
+            completionCosts:{test:50},
+            passiveGeneration:null,
+            completionGeneration:{wheat:1},
+            completionYears:1,
+            unlock:null,
+            name:"Dev Test Task",
+            predescription:"This shouldn't generally be in the live game, if it is let the devs know 'cause we left dev mode on.",
+            completionstory:"You did a dev test!",
+            description:"Just here so I can easily test new task-related features/improvements...",
+        });
+    }
 
     checkVisibleTasks();
 
