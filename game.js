@@ -16,6 +16,9 @@ var generateResource = function(task, resourceName, rawAmount) {
 
 var processPassiveTask = function(task, yearsElapsed) {
     for (resource in task.def.passiveGeneration) {
+        if (!player.resources[resource]) {
+            player.resources[resource] = 0;
+        }
         player.resources[resource] += generateResource(task, resource, task.def.passiveGeneration[resource]*yearsElapsed);
     }
 }
@@ -61,6 +64,9 @@ var checkVisibleTasks = function() {
 var completeTask = function(task) {
     if (task.def.completionGeneration != null) {
         for (resource in task.def.completionGeneration) {
+            if (!player.resources[resource]) {
+                player.resources[resource] = 0;
+            }
             player.resources[resource] += generateResource(task, resource, task.def.completionGeneration[resource]);
         }
     }
