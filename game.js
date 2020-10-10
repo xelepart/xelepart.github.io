@@ -1,4 +1,4 @@
-game = {alltasks:[],startage:20,maxage:27}
+game = {alltasks:[],startage:18,maxage:30}
 player = {resources:{},activetask:null,history:{camscale:2,camtransx:-500,camtransy:-300}}
 
 canvas = document.getElementById("canvas");
@@ -11,21 +11,12 @@ var generateResource = function(task, resourceName, rawAmount) {
     if (!player.resources[resourceName]) {
         player.resources[resourceName] = 0;
     }
-    console.log(resourceName);
-    console.log(rawAmount);
-    console.log(task);
-    console.log(task.history);
-    console.log(task.history.maxlevel);
-    console.log(1.1^task.history.maxlevel);
-    console.log(rawAmount*Math.pow(1.1,task.history.maxlevel));
-    console.log(player.resources[resourceName]);
-    player.resources[resourceName] += rawAmount*Math.pow(1.1,task.history.maxlevel); // this should get complicated with groundhog meta?
-    console.log(player.resources[resourceName]);
+    return rawAmount*Math.pow(1.1,task.history.maxlevel); // this should get complicated with groundhog meta?
 }
 
 var processPassiveTask = function(task, yearsElapsed) {
     for (resource in task.passiveGeneration) {
-        generateResource(task, resource, task.def.passiveGeneration[resource]*yearsElapsed);
+        player.resources[resourceName] += generateResource(task, resource, task.def.passiveGeneration[resource]*yearsElapsed);
     }
 }
 
@@ -33,6 +24,9 @@ var nextMiscX = 300;
 var nextMiscY = 100;
 var checkVisibleTasks = function() {
     game.tasks = [];
+
+    hoveredTaskStillVisible = false;
+
     game.alltasks.forEach(task => {
         var completed = !task.def.repeatable && task.life.level > 0;
 
@@ -45,6 +39,7 @@ var checkVisibleTasks = function() {
 
         if (freebie || active || prereqMet || prereqPreviouslyMet) {
             game.tasks.push(task);
+            if (task === hoveredOverTask) hoveredTaskStillVisible = true;
             if (!task.history.seen) {
                 task.history.seen = true;
                 task.history.x = task.def.unlock === null ? nextMiscX : task.def.unlock.def.realtask.history.x + 100;
@@ -53,14 +48,18 @@ var checkVisibleTasks = function() {
         }
     });
 
-    hoveredOverTask = null;
-    hideToolTip();
+    if (!hoveredTaskStillVisible) {
+        hoveredOverTask = null;
+        hideToolTip();
+    } else {
+        updateTooltipText();
+    }
 }
 
 var completeTask = function(task) {
     if (task.def.completionGeneration != null) {
         for (resource in task.def.completionGeneration) {
-            generateResource(task, resource, task.def.completionGeneration[resource]);
+            player.resources[resource] += generateResource(task, resource, task.def.completionGeneration[resource]);
         }
     }
 
@@ -90,7 +89,11 @@ function killPlayer(description) {
     sendMessage(description);
 
     game.alltasks.forEach(task => {
-        task.history.maxlevel = Math.max(task.history.maxlevel||0, task.life.level||0);
+        if (task.def.repeatable) {
+            task.history.maxlevel = Math.max(task.history.maxlevel||0, task.life.level||0);
+        } else {
+            task.history.maxlevel += (task.history.maxlevel||0) + task.life.level; // for repeatables, they get more "powerful" every time you do it.
+        }
         task.life.level = 0;
     });
 
@@ -124,13 +127,13 @@ function refreshStats()
 var update = function(elapsed) {
     if (player.activetask) { // if no active task, we don't update the game! NOT IDLE!
         var maxYearsElapsed = elapsed * GAMESPEED_RATIO;
-        var remainingYears = player.activetask.def.completionYears - player.activetask.life.yearsWorked;
+        var remainingYears = computeCompletionYears(player.activetask) - player.activetask.life.yearsWorked;
         var yearsElapsed = Math.min(maxYearsElapsed, remainingYears);
 
         // continue the active task...
         player.activetask.life.yearsWorked += yearsElapsed;
 
-        if (player.activetask.def.completionYears == player.activetask.life.yearsWorked) {
+        if (computeCompletionYears(player.activetask) == player.activetask.life.yearsWorked) {
             completeTask(player.activetask);
             player.activetask = null;
         }
@@ -183,7 +186,7 @@ var draw = function() {
         ctx.drawImage(image, task.history.x-25, task.history.y-25, 50, 50);
 
         if (task = player.activetask) {
-            var pctComplete = task.life.yearsWorked / task.def.completionYears;
+            var pctComplete = task.life.yearsWorked / computeCompletionYears(task);
 
             ctx.globalAlpha = 0.3
             ctx.beginPath();
@@ -237,9 +240,24 @@ function findClosestTask(evt) {
     return closestTask;
 }
 
-function showToolTip(task) {
-    var tooltip = document.getElementById("tooltip");
-    tooltip.innerHTML = task.def.name + "<br/>" + task.def.description;
+var tooltip = document.getElementById("tooltip");
+function updateTooltipText() {
+    if (!updateTooltipText) hideToolTip();
+    tooltip.innerHTML = hoveredOverTask.def.name + "<br/>"
+                   + hoveredOverTask.def.description + "<br/>"
+                   + "Takes " + Math.round(computeCompletionYears(hoveredOverTask)*10)/10 + " years<br/>"
+                   + (hoveredOverTask.def.passiveGeneration ? (hoveredOverTask.life.level > 0 ? "Currently passively producing " : "Upon completion would start to passively produce ") + "the following per year...<br/>" + Object.entries(hoveredOverTask.def.passiveGeneration).map(e => e[0] + ": " + (Math.round(generateResource(hoveredOverTask, e[0], e[1])*10)/10)) + "<br/>" : "")
+                   + (hoveredOverTask.def.completionGeneration ? "Upon active completion, will produce...<br/>" + Object.entries(hoveredOverTask.def.completionGeneration).map(e => e[0] + ": " + (Math.round(generateResource(hoveredOverTask, e[0], e[1])*10)/10)) + "<br/>" : "")
+                   + ((hoveredOverTask.life.level===0 && hoveredOverTask.history.maxlevel===0) ? "<br/>Is " + (hoveredOverTask.def.repeatable ? "" : "not ") + " repeatable after first completion.<br/>" : "");
+   // things to maybe add:
+   // "Will unlock..." ? (not sure i want this in the tooltip, honestly)
+   // How much passive it would produce if you leveled it up. (also: passives should go up with life.level?)
+   // Highest level you've ever had.
+   // Current level.
+}
+
+function showToolTip() {
+    updateTooltipText();
     tooltip.style.left = event.clientX + 20;
     tooltip.style.top = event.clientY;
     tooltip.style.display = "block";
@@ -247,6 +265,10 @@ function showToolTip(task) {
 
 function hideToolTip() {
     tooltip.style.display="none";
+}
+
+function computeCompletionYears(task) {
+    return task.def.completionYears * Math.pow(0.99,task.history.maxlevel);
 }
 
 function registerTaskDefinition(taskDefinition) {
@@ -311,7 +333,7 @@ function handleMouseMove(e){
     hoveredOverTask = findClosestTask(e);
 
     if (hoveredOverTask) {
-        showToolTip(hoveredOverTask);
+        showToolTip();
     } else { // No task, hide tooltip
         hideToolTip();
     }
