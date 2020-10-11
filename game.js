@@ -1,8 +1,11 @@
 var game = {alltasks:{},startage:18,maxage:35};
 var player = null
-if (window.localStorage.getItem("game")) {
-    player = JSON.parse(window.localStorage.getItem("player"));
-    console.log("From local");
+if (window.localStorage.getItem("player")) {
+    json = window.localStorage.getItem("player");
+    player = JSON.parse(json);
+    console.log("From local...");
+    console.log(json);
+    console.log(player);
 } else {
     console.log("init")
     player = {tasks:{},resources:{},skills:{},tools:{},activetaskid:null,history:{camscale:2,camtransx:-500,camtransy:-250,skills:{},tools:{}}}
@@ -145,6 +148,7 @@ var completeTask = function(task) {
     checkVisibleTasks();
 
     window.localStorage.setItem("player", JSON.stringify(player));
+    console.log("put it there")
 }
 
 var doTask = function(task) {
@@ -178,19 +182,22 @@ var doTask = function(task) {
     task.life.yearsWorked = 0;
 }
 
+var popupText = document.getElementById("PopupText");
+var popupDiv = document.getElementById("popup");
 function sendMessage(text, popup) {
     if (popup) {
-        document.getElementById("PopupText").innerHTML=text;
-        document.getElementById("popup").style.display="block";
-        console.log("I should hav eopened a popup");
-    } 
+        popupText.innerHTML = text;
+        popupDiv.style.display="block";
+    }
 
     messageBlock = document.getElementById("messages")
     messageBlock.innerHTML = "<br/>" + text + "<br/>" + messageBlock.innerHTML;
 }
+
 function closePopup() {
-        document.getElementById("popup").style.display="none";
+    popupDiv.style.display="none";
 }
+
 function resetPlayer() {
     player.age = game.startage;
     player.activetaskid = null;
@@ -709,7 +716,10 @@ function startGame() {
 
     verifyTasks();
 
-    resetPlayer();
+    if (!player.age) {
+        resetPlayer();
+    }
+
     sendMessage("Welcome to the game! One day, we might save progress, but right now you get to start at the start every time. But that's probably okay, the game just ain't that long.", true);
 
     if (false) {
@@ -737,7 +747,6 @@ function startGame() {
 
     canvas.addEventListener('click', handleMouseClick, false);
     canvas.addEventListener('mousemove', handleMouseMove, false);
-    popup = document.getElementById("popup");
     popup.addEventListener('click', closePopup, false);
 
     window.requestAnimationFrame(loop)
