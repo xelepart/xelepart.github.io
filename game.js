@@ -145,10 +145,10 @@ var completeTask = function(task) {
     task.life.level++;
 
     if (!task.history.evercompleted) {
-        sendMessage(task.def.completionstory, true);
+        sendMessage("<i>" + task.def.predescription + "</i><br>" + task.def.completionstory, false);
+        task.history.evercompleted = true;
     }
 
-    task.history.evercompleted = true;
     // the important part of a completed task is checking if new tasks are unlocked
     // (one day this might happen outside of task completion/game init 'cause who tf knows what would cause unlocks? maybe?)
     checkVisibleTasks();
@@ -192,7 +192,7 @@ function sendMessage(text, popup) {
     }
 
     messageBlock = document.getElementById("messages")
-    messageBlock.innerHTML = "<br/>" + text + "<br/>" + messageBlock.innerHTML;
+    messageBlock.innerHTML = messageBlock.innerHTML + "<br/>" + text + "<br/>";
 }
 
 function closePopup() {
@@ -512,7 +512,7 @@ function verifyTasks() {
 function startGame() {
     game = {alltasks:{},startage:18,maxage:35};
     var allowLoop = 1; // for easy "pause the game so I can debug state" (may never be useful again who knows)
-    var allowLoad = 1; // for easy "force a state reset"
+    var allowLoad = 0; // for easy "force a state reset"
     if (allowLoad && window.localStorage.getItem("player")) {
         json = atob(window.localStorage.getItem("player"));
         player = JSON.parse(json);
@@ -720,12 +720,12 @@ function startGame() {
     verifyTasks();
 
     if (!player.age) {
+        sendMessage("Welcome to the game! I won't bore you with details or story right now. Go ahead and start farming. (But, if you like story, check out the message log on the right side of the screen!)", true);
         resetPlayer();
     } else {
         refreshStats();
     }
 
-    sendMessage("Welcome to the game! One day, we might save progress, but right now you get to start at the start every time. But that's probably okay, the game just ain't that long.", true);
 
     if (false) {
         player.resources.test=100;
