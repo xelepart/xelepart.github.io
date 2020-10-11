@@ -2,7 +2,11 @@
 <head><link rel="stylesheet" href="game.css"></head>
 <body style="margin:0;display:flex;">
 <div id="canvasdiv" style="flex:1"><canvas id="canvas" style="z-index: 1;"></canvas></div>
-<div id="UI" style="z-index: 4;width:300px;top:250px:px;background-color:grey;border: 5px solid honeydew; border-radius: 10px;padding:20px;display:black">
+<div id="popup"  style="z-index: 4;position:absolute;top:200px;width:400px;left:120px;background-color:grey;border: 5px solid honeydew; border-radius: 10px;padding:20px;display:none">
+	<div style="z-index: 5;position:absolute;top:-14px;left:-10px;background-color:grey;border: 2px solid honeydew; border-radius: 5px;padding:2px;display:black;cursor: pointer;">X</div>
+	<div id="PopupText"></div>
+</div>
+<div id="UI" style="z-index: 4;width:300px;top:250px:px;background-color:grey;border: 5px solid honeydew; border-radius: 10px;padding:20px;display:block;">
 	<div id="statsblock" style="color: cyan;">
 		<div id="AgeBlock"><span id="age">1</span><span id="agelabel" style="color:lightgreen"> years old</span><span id="TotalLives"></span></div>
 		<div style="color:Chartreuse">Skills:</div>

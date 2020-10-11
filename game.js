@@ -169,11 +169,18 @@ var doTask = function(task) {
 }
 
 function sendMessage(text, popup) {
-//    if (popup) alert(text + "    (sorry popup is alert, working on it)")
+    if (popup) {
+        document.getElementById("PopupText").innerHTML=text;
+        document.getElementById("popup").style.display="block";
+        console.log("I should hav eopened a popup");
+    } 
+
     messageBlock = document.getElementById("messages")
     messageBlock.innerHTML = "<br/>" + text + "<br/>" + messageBlock.innerHTML;
 }
-
+function closePopup() {
+        document.getElementById("popup").style.display="none";
+}
 function resetPlayer() {
     player.age = game.startage;
     player.activetaskid = null;
@@ -686,7 +693,7 @@ function startGame() {
     verifyTasks();
 
     resetPlayer();
-    sendMessage("Welcome to the game! One day, we might save progress, but right now you get to start at the start every time. But that's probably okay, the game just ain't that long.");
+    sendMessage("Welcome to the game! One day, we might save progress, but right now you get to start at the start every time. But that's probably okay, the game just ain't that long.", true);
 
     if (false) {
         player.resources.test=100;
@@ -713,6 +720,8 @@ function startGame() {
 
     canvas.addEventListener('click', handleMouseClick, false);
     canvas.addEventListener('mousemove', handleMouseMove, false);
+    popup = document.getElementById("popup");
+    popup.addEventListener('click', closePopup, false);
 
     window.requestAnimationFrame(loop)
 }
