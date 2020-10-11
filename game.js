@@ -512,7 +512,7 @@ function verifyTasks() {
 function startGame() {
     game = {alltasks:{},startage:18,maxage:35};
     var allowLoop = 1; // for easy "pause the game so I can debug state" (may never be useful again who knows)
-    var allowLoad = 0; // for easy "force a state reset"
+    var allowLoad = 1; // for easy "force a state reset"
     if (allowLoad && window.localStorage.getItem("player")) {
         json = atob(window.localStorage.getItem("player"));
         player = JSON.parse(json);
