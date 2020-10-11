@@ -1,19 +1,25 @@
-var game = {alltasks:{},startage:18,maxage:35};
-var player = null
-if (window.localStorage.getItem("player")) {
-    json = window.localStorage.getItem("player");
-    player = JSON.parse(json);
-    console.log("From local...");
-    console.log(json);
-    console.log(player);
-} else {
-    console.log("init")
-    player = {tasks:{},resources:{},skills:{},tools:{},activetaskid:null,history:{camscale:2,camtransx:-500,camtransy:-250,skills:{},tools:{}}}
-}
+// global context 'cause' that's how this seems to work?
+var game = null;
+var player = null;
 
+// UI elements (should probably load all these in startGame() once, but the internet says one of the biggest/most common
+// efficiency failures in html5 games is re-fetching DOM elements,
+// so figured we should do this one particular premature optimization.
+var canvasdiv = document.getElementById("canvasdiv");
+var canvas = document.getElementById("canvas");
+var ctx = canvas.getContext("2d");
 
-canvas = document.getElementById("canvas");
-ctx = canvas.getContext("2d");
+var popupText = document.getElementById("PopupText");
+var popupDiv = document.getElementById("popup");
+
+var miscResourcesSpan = document.getElementById("MiscResources");
+var miscSkillsSpan = document.getElementById("MiscSkills");
+var miscToolsSpan = document.getElementById("MiscTools");
+var totalLivesSpan = document.getElementById("TotalLives");
+var ageValueSpan = document.getElementById("age");
+var ageLabelSpan = document.getElementById("agelabel");
+
+var tooltip = document.getElementById("tooltip");
 
 //GAMESPEED_RATIO = 1 / (5 * 60 * 1000)  // 1 year every 5 minutes in ms
 GAMESPEED_RATIO = 1 / (1 * 1000)  // 1 year every 1 seconds in ms
@@ -146,9 +152,6 @@ var completeTask = function(task) {
     // the important part of a completed task is checking if new tasks are unlocked
     // (one day this might happen outside of task completion/game init 'cause who tf knows what would cause unlocks? maybe?)
     checkVisibleTasks();
-
-    window.localStorage.setItem("player", JSON.stringify(player));
-    console.log("put it there")
 }
 
 var doTask = function(task) {
@@ -182,8 +185,6 @@ var doTask = function(task) {
     task.life.yearsWorked = 0;
 }
 
-var popupText = document.getElementById("PopupText");
-var popupDiv = document.getElementById("popup");
 function sendMessage(text, popup) {
     if (popup) {
         popupText.innerHTML = text;
@@ -269,12 +270,6 @@ function killPlayer(description) {
     resetPlayer();
 }
 
-var miscResourcesSpan = document.getElementById("MiscResources");
-var miscSkillsSpan = document.getElementById("MiscSkills");
-var miscToolsSpan = document.getElementById("MiscTools");
-var totalLivesSpan = document.getElementById("TotalLives");
-var ageValueSpan = document.getElementById("age");
-var ageLabelSpan = document.getElementById("agelabel");
 function refreshStats()
 {
     ageValueSpan.innerHTML=Math.round(player.age * 10) / 10;
@@ -315,6 +310,7 @@ function refreshStats()
 }
 
 var update = function(elapsed) {
+    var shouldSave = false;
     if (player.activetaskid) { // if no active task, we don't update the game! NOT IDLE!
         var playertask = game.alltasks[player.activetaskid];
         var maxYearsElapsed = elapsed * GAMESPEED_RATIO;
@@ -325,8 +321,9 @@ var update = function(elapsed) {
         playertask.life.yearsWorked += yearsElapsed;
 
         if (computeCompletionYears(playertask) == playertask.life.yearsWorked) {
-            completeTask(playertask);
             player.activetaskid = null;
+            completeTask(playertask);
+            shouldSave = true;
         }
 
         // not in V1, but this is probably where automated tasks would go?
@@ -346,10 +343,10 @@ var update = function(elapsed) {
             killPlayer("Oh no! You died of old age! Blah blah blah story wtf you're " + game.startage + " again");
         }
     }
-    refreshStats()
+    refreshStats();
+    window.localStorage.setItem("player", btoa(JSON.stringify(player)));
 }
 
-var canvasdiv = document.getElementById("canvasdiv");
 var draw = function() {
     canvas.width = canvasdiv.offsetWidth;
     canvas.height = canvasdiv.offsetHeight;
@@ -431,7 +428,6 @@ function findClosestTask(evt) {
     return closestTask;
 }
 
-var tooltip = document.getElementById("tooltip");
 function updateTooltipText() {
     if (!updateTooltipText) hideToolTip();
     var priorLevelDetailString = " (new)";
@@ -500,8 +496,8 @@ function registerTaskDefinition(taskDefinition) {
     } else {
         // if the player doesn't yet have a history for this task, either we didn't load from disk or it's a new task added by new content.
         var playertask = {life:task.life, history:task.history};
+        player.tasks[taskDefinition.taskid] = playertask;
     }
-    player.tasks[taskDefinition.taskid] = playertask;
 }
 
 function verifyTasks() {
@@ -514,8 +510,15 @@ function verifyTasks() {
 }
 
 function startGame() {
-    var c = document.getElementById("canvas");
-    var ctx = c.getContext("2d");
+    game = {alltasks:{},startage:18,maxage:35};
+    var allowLoop = 1; // for easy "pause the game so I can debug state" (may never be useful again who knows)
+    var allowLoad = 1; // for easy "force a state reset"
+    if (allowLoad && window.localStorage.getItem("player")) {
+        json = atob(window.localStorage.getItem("player"));
+        player = JSON.parse(json);
+    } else {
+        player = {tasks:{},resources:{},skills:{},tools:{},activetaskid:null,history:{camscale:2,camtransx:-500,camtransy:-250,skills:{},tools:{}}}
+    }
 
     registerTaskDefinition({
         taskid:"farm1",
@@ -718,6 +721,8 @@ function startGame() {
 
     if (!player.age) {
         resetPlayer();
+    } else {
+        refreshStats();
     }
 
     sendMessage("Welcome to the game! One day, we might save progress, but right now you get to start at the start every time. But that's probably okay, the game just ain't that long.", true);
@@ -749,7 +754,7 @@ function startGame() {
     canvas.addEventListener('mousemove', handleMouseMove, false);
     popup.addEventListener('click', closePopup, false);
 
-    window.requestAnimationFrame(loop)
+    if (allowLoop) window.requestAnimationFrame(loop)
 }
 
 var handleMouseClick = function(e) {
