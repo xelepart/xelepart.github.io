@@ -1,5 +1,13 @@
-game = {alltasks:{},startage:18,maxage:35}
-player = {tasks:{},resources:{},skills:{},tools:{},activetaskid:null,history:{camscale:2,camtransx:-500,camtransy:-250,skills:{},tools:{}}}
+var game = {alltasks:{},startage:18,maxage:35};
+var player = null
+if (window.localStorage.getItem("game")) {
+    player = JSON.parse(window.localStorage.getItem("player"));
+    console.log("From local");
+} else {
+    console.log("init")
+    player = {tasks:{},resources:{},skills:{},tools:{},activetaskid:null,history:{camscale:2,camtransx:-500,camtransy:-250,skills:{},tools:{}}}
+}
+
 
 canvas = document.getElementById("canvas");
 ctx = canvas.getContext("2d");
@@ -135,6 +143,8 @@ var completeTask = function(task) {
     // the important part of a completed task is checking if new tasks are unlocked
     // (one day this might happen outside of task completion/game init 'cause who tf knows what would cause unlocks? maybe?)
     checkVisibleTasks();
+
+    window.localStorage.setItem("player", JSON.stringify(player));
 }
 
 var doTask = function(task) {
@@ -435,7 +445,7 @@ function updateTooltipText() {
 
     tooltip.innerHTML = hoveredOverTask.def.name + priorLevelDetailString + "<br/>"
                    + (hoveredOverTask.history.evercompleted ? hoveredOverTask.def.description : hoveredOverTask.def.predescription) + "<br/>"
-                   + "Takes " + Math.round(computeCompletionYears(hoveredOverTask)*10)/10 + " years<br/>"
+                   + "Takes " + Math.round(computeCompletionYears(hoveredOverTask)*100)/100 + " years<br/>"
                    + (hoveredOverTask.def.completionCosts ? "Doing this would cost...<br/>" + Object.entries(hoveredOverTask.def.completionCosts).map(e => e[0] + ": " + (Math.round(computeCompletionCost(hoveredOverTask, e[1])*10)/10)) + "<br/>" : "")
                    + (hoveredOverTask.def.passiveGeneration ? (hoveredOverTask.life.level > 0 ? "Currently passively producing " : "Upon completion would start to passively produce ") + "the following per year...<br/>" + Object.entries(hoveredOverTask.def.passiveGeneration).map(e => e[0] + ": " + (Math.round(computeResourceGeneration(hoveredOverTask, e[0], e[1])*10)/10)) + "<br/>" : "")
                    + (hoveredOverTask.def.completionGeneration ? "Upon completion, will produce...<br/>" + Object.entries(hoveredOverTask.def.completionGeneration).map(e => e[0] + ": " + (Math.round(computeResourceGeneration(hoveredOverTask, e[0], e[1])*10)/10)) + "<br/>" : "")
@@ -469,7 +479,14 @@ function registerTaskDefinition(taskDefinition) {
 
     var task = {def:taskDefinition,life:{level:0},history:{maxlevel:0}};
     game.alltasks[taskDefinition.taskid] = task;
-    var playertask = {life:task.life, history:task.history};
+    if (player.tasks[taskDefinition.taskid]) {
+        // this would mean we loaded the savestate from disk, so pull from player. (could be some weird stuff with loading old saves for new content?)
+        task.life = player.tasks[taskDefinition.taskid].life;
+        task.history = player.tasks[taskDefinition.taskid].history;
+    } else {
+        // if the player doesn't yet have a history for this task, either we didn't load from disk or it's a new task added by new content.
+        var playertask = {life:task.life, history:task.history};
+    }
     player.tasks[taskDefinition.taskid] = playertask;
 }
 
@@ -661,7 +678,7 @@ function startGame() {
         newlifeResources:{gold:250},
         unlock:{taskid:"farmerretire", level:1, permanent:true},
         name:"ACHIEVEMENT: Inheritance!",
-        predescription:"While it makes no sense, having made it to retirement appears to have changed the timeline, and your future lives will all start with 100 gold! Thanks, past-me. Or, future-me? Or... uh...",
+        predescription:"While it makes no sense, having made it to retirement appears to have changed the timeline, and your future lives will all start with 250 gold! Thanks, past-me. Or, future-me? Or... uh...",
         completionstory:"ACHIEVEMENT UNLOCKED: Inheritance!",
         description:"You've already completed this achievement, you should never see this. If you do, please report it to the devs.",
     });
@@ -678,8 +695,8 @@ function startGame() {
         completionYears:0.25,
         unlock:{taskid:"farm2", level:19, permanent:true},
         name:"Become a Squire",
-        predescription:"A knight passes by the growing farm and notices the strength that can only come from years of hard labor clearing a farm the hard way. You could handle yourself in the melee young one he comments as he heads into the city. Think on it.",
-        completionstory:"You've become a squire! B hasn't written the squire story path yet, so this is the end of the line over here. But, like. It's gonna be cool.",
+        predescription:"A knight passes by the growing farm and notices the strength that can only come from years of hard labor clearing a farm the hard way. \"You could handle yourself in the melee, young one,\" he comments as he heads into the city. \"Think on it.\"",
+        completionstory:"You've become a squire! B hasn't written the squire story path yet, so this is the end of the line over here in squire land (but probably more to do in farmer land!). But, like. It's gonna be cool.",
         description:"I. AM. SQUIRE.",
     });
 
