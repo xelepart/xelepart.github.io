@@ -207,7 +207,7 @@ var doTask = function(task) {
 function sendMessage(text, popup) {
     if (popup) {
         popupText.innerHTML = text;
-        popupDiv.style.display="block";
+//        popupDiv.style.display="block";
     }
 
     messageBlock = document.getElementById("messages")
@@ -259,10 +259,11 @@ function resetPlayer() {
     // tools all reset to 0 on new life.
 
     refreshStats();
+    needRedraw = true;
 }
 
 function killPlayer(description) {
-    sendMessage(description, true);
+    if (description) sendMessage(description, true);
 
     Object.entries(game.alltasks).forEach(e => {
         var task = e[1];
@@ -293,6 +294,7 @@ function killPlayer(description) {
 
     resetPlayer();
     window.localStorage.setItem("player", btoa(JSON.stringify(player)));
+    needRedraw = true;
 }
 
 function refreshStats()
@@ -591,6 +593,22 @@ function verifyTasks() {
     });
 }
 
+function checkAndHardReset() {
+   if (confirm("You really want to start completely over?")) hardReset();
+}
+
+function hardReset() {
+    player = {tasks:{},resources:{},skills:{},tools:{},activetaskid:null,history:{nextMiscX:300,nextMiscY:100,camscale:2,camtransx:-500,camtransy:-250,skills:{},tools:{}}}
+    Object.entries(game.alltasks).forEach(e => {
+        var task = e[1];
+        task.life = {level:0};
+        task.history = {maxlevel:0};
+        var playertask = {life:task.life, history:task.history};
+        player.tasks[task.taskid] = playertask;
+    });
+    killPlayer();
+}
+
 function startGame() {
     game = {alltasks:{},startage:18,maxage:35};
     var allowLoop = 1; // for easy "pause the game so I can debug state" (may never be useful again who knows)
@@ -599,7 +617,7 @@ function startGame() {
         json = atob(window.localStorage.getItem("player"));
         player = JSON.parse(json);
     } else {
-        player = {tasks:{},resources:{},skills:{},tools:{},activetaskid:null,history:{nextMiscX:300,nextMiscY:100,camscale:2,camtransx:-500,camtransy:-250,skills:{},tools:{}}}
+        hardReset();
     }
 
     registerTaskDefinition({

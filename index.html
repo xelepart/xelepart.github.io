@@ -8,7 +8,7 @@
 </div>
 <div id="UI" style="z-index: 4;width:300px;top:250px:px;background-color:grey;border: 5px solid honeydew; border-radius: 10px;padding:20px;display:block;">
 	<div id="statsblock" style="color: cyan;">
-		<div id="AgeBlock"><span id="age">1</span><span id="agelabel" style="color:lightgreen"> years old</span><span id="TotalLives"></span></div>
+		<div id="AgeBlock"><span id="age">1</span><span id="agelabel" style="color:lightgreen"> years old</span><span id="TotalLives"></span><button type="button" style="margin-left:50px" onclick="javascript:killPlayer()">Die Young</button></div>
 		<div style="color:Chartreuse">Skills:</div>
 		<span id="MiscSkills">Skills</span>
 		<div style="color:Chartreuse">Tools:</div>
@@ -20,6 +20,7 @@
 	<div id="messages" style="color:White; overflow: scroll;height: 70%">
 		Hello! This is where messages will show up!
 	</div>
+	<button type="button" onclick="javascript:checkAndHardReset()">Hard Reset</button>
 </div>
 
 <div id="tooltip" onmouseover="javascript:showToolTip(hoveredOverTask);" style="position: absolute;z-index: 999;top:250px;left:210px;background-color:grey;border: 5px solid honeydew; user-select: none; max-width:50%; border-radius: 10px;padding:20px;display:none">Tooltip</div>
