@@ -21,6 +21,8 @@ var ageLabelSpan = document.getElementById("agelabel");
 
 var tooltip = document.getElementById("tooltip");
 
+var needRedraw = true; // this is the "UI is dirty" flag, 'cause nobody likes games that run at 100% cpu...
+
 //GAMESPEED_RATIO = 1 / (5 * 60 * 1000)  // 1 year every 5 minutes in ms
 GAMESPEED_RATIO = 1 / (1 * 1000)  // 1 year every 1 seconds in ms
 //GAMESPEED_RATIO = 1 / (1 * 100)  // 1 year every .1 seconds in ms
@@ -312,6 +314,7 @@ function refreshStats()
 var update = function(elapsed) {
     var shouldSave = false;
     if (player.activetaskid) { // if no active task, we don't update the game! NOT IDLE!
+        needRedraw = true; // i was getting sick of my CPU running at 100%, so game updates don't trigger draw updates if they don't need to?
         var playertask = game.alltasks[player.activetaskid];
         var maxYearsElapsed = elapsed * GAMESPEED_RATIO;
         var remainingYears = computeCompletionYears(playertask) - playertask.life.yearsWorked;
@@ -344,10 +347,11 @@ var update = function(elapsed) {
         }
     }
     refreshStats();
-    window.localStorage.setItem("player", btoa(JSON.stringify(player)));
+    if (shouldSave) window.localStorage.setItem("player", btoa(JSON.stringify(player)));
 }
 
 var draw = function() {
+    needRedraw = false;
     canvas.width = canvasdiv.offsetWidth;
     canvas.height = canvasdiv.offsetHeight;
 
@@ -394,11 +398,13 @@ function loop(timestamp) {
 
     if (lastRender > 0) {
         update(progress)
-        draw()
+        if (needRedraw) {
+            draw()
+        }
     }
 
     lastRender = timestamp
-window.requestAnimationFrame(loop)
+    window.requestAnimationFrame(loop)
 }
 var lastRender = 0
 
@@ -471,6 +477,7 @@ function updateTooltipText() {
 }
 
 function showToolTip() {
+    needRedraw = true; // i was getting sick of my CPU running at 100%, so game updates don't trigger draw updates if they don't need to?
     updateTooltipText();
     tooltip.style.left = event.clientX + 20;
     tooltip.style.top = event.clientY;
@@ -478,7 +485,10 @@ function showToolTip() {
 }
 
 function hideToolTip() {
-    tooltip.style.display="none";
+    if (tooltip.style.display != "none") {
+        needRedraw = true; // i was getting sick of my CPU running at 100%, so game updates don't trigger draw updates if they don't need to?
+        tooltip.style.display="none";
+    }
 }
 
 function registerTaskDefinition(taskDefinition) {
