@@ -614,8 +614,13 @@ function startGame() {
     var allowLoop = 1; // for easy "pause the game so I can debug state" (may never be useful again who knows)
     var allowLoad = 1; // for easy "force a state reset"
     if (allowLoad && window.localStorage.getItem("player")) {
-        json = atob(window.localStorage.getItem("player"));
-        player = JSON.parse(json);
+        var json = null;
+        try {
+            json = atob(window.localStorage.getItem("player"));
+        } catch(err) {
+            hardReset();
+        }
+        if (json) player = JSON.parse(json);
     } else {
         hardReset();
     }
