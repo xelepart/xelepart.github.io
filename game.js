@@ -25,7 +25,7 @@ var needRedraw = true; // this is the "UI is dirty" flag, 'cause nobody likes ga
 
 //GAMESPEED_RATIO = 1 / (5 * 60 * 1000)  // 1 year every 5 minutes in ms
 //GAMESPEED_RATIO = 1 / (1 * 1000)  // 1 year every 1 seconds in ms
-GAMESPEED_RATIO = 1 / (1 * 100)  // 1 year every .1 seconds in ms
+GAMESPEED_RATIO = 1 / (1 * 250)  // 1 year every .1 seconds in ms
 
 var computeResourceGeneration = function(task, resourceName, rawAmount) {
     if (!player.resources[resourceName]) {
@@ -80,35 +80,50 @@ var checkVisibleTasks = function() {
 
     hoveredTaskStillVisible = false;
 
-    Object.entries(game.alltasks).forEach(e => {
-        var task = e[1];
+    var recheck = true;
+    while (recheck) {
+        recheck = false;
+        Object.entries(game.alltasks).forEach(e => {
+            var task = e[1];
 
-        var completed = !task.def.repeatable && task.life.level > 0;
-        var unlocked = task.def.achievement && (task.life.level > 0 || task.history.maxlevel > 0);
-        if (completed || unlocked) return;
+            var unlocked = task.def.achievement && (task.life.level > 0 || task.history.maxlevel > 0);
+            if (unlocked) return; // we don't show unlocked achievements again?
 
-        var freebie = task.def.unlock === null;
-        var active = task.life.level > 0;
-        var prereqMet = task.def.unlock !== null && ((task.def.unlock.taskid && task.def.unlock.level && game.alltasks[task.def.unlock.taskid].life.level >= task.def.unlock.level)
-                                                     || (task.def.unlock.resourceName && player.resources[task.def.unlock.resourceName] >= task.def.unlock.amount)
-                                                     || (task.def.unlock.taskid && task.def.unlock.historiclevel && game.alltasks[task.def.unlock.taskid].history.maxlevel >= task.def.unlock.historiclevel));
-        var prereqPreviouslyMet = task.def.unlock !== null && task.def.unlock.permanent && task.history.seen && !task.history.hintmode;
+            var completed = !task.def.repeatable && task.life.level > 0;
 
-        var actuallyVisible = freebie || active || prereqMet || prereqPreviouslyMet;
-        var hintmode = !actuallyVisible && task.def.parenttask && game.alltasks[task.def.parenttask.taskid].history.seen && !game.alltasks[task.def.parenttask.taskid].history.hintmode;
+            var freebie = task.def.unlock === null;
+            var active = task.life.level > 0;
 
-        if (actuallyVisible || hintmode) {
-            task.history.hintmode = hintmode;
-            game.tasks.push(task);
-            if (task === hoveredOverTask) hoveredTaskStillVisible = true;
-            if (!task.history.seen) {
-                task.history.seen = true;
-                offsettask = task.def.parenttaskid ? game.alltasks[task.def.parenttaskid] : task.def.unlock && task.def.unlock.taskid ? game.alltasks[task.def.unlock.taskid] : null;
-                task.history.x = offsettask ? offsettask.history.x + 60 : player.history.nextMiscX;
-                task.history.y = offsettask ? offsettask.history.y : (player.history.nextMiscY += 60);
+            var taskLevelPrereqMet = task.def.unlock !== null && (task.def.unlock.taskid && task.def.unlock.level && game.alltasks[task.def.unlock.taskid].life.level >= task.def.unlock.level);
+            var resourcePrereqMet = task.def.unlock !== null && (task.def.unlock.resourceName && player.resources[task.def.unlock.resourceName] >= task.def.unlock.amount);
+            var historicTaskLevelPrereqMet = task.def.unlock !== null && (task.def.unlock.taskid && task.def.unlock.historiclevel && game.alltasks[task.def.unlock.taskid].history.maxlevel >= task.def.unlock.historiclevel);
+            var prereqMet = taskLevelPrereqMet || resourcePrereqMet || historicTaskLevelPrereqMet;
+
+            var permanentPreviousLive = (task.def.unlock !== null) && task.def.unlock.permanent && task.history.everlive;
+
+            var actuallyVisible = freebie || active || prereqMet || permanentPreviousLive;
+            var hintmode = !actuallyVisible && task.def.parenttask && game.alltasks[task.def.parenttask.taskid].history.seen && !(game.alltasks[task.def.parenttask.taskid].history.mode=='hintmode');
+            var previouslyDone = task.history.maxlevel > 0;
+
+            if (actuallyVisible || hintmode || previouslyDone) {
+                task.history.mode = completed ? 'completed' : actuallyVisible ? 'live' : previouslyDone ? 'locked' : 'hintmode';
+                if (actuallyVisible) {
+                    task.history.everlive = true;
+                }
+                game.tasks.push(task);
+                if (task === hoveredOverTask) hoveredTaskStillVisible = true;
+                if (!task.history.seen) {
+                    recheck = true;
+                    needRedraw = true;
+                    task.history.seen = true;
+                    offsettask = task.def.parenttaskid ? game.alltasks[task.def.parenttaskid] : task.def.unlock && task.def.unlock.taskid ? game.alltasks[task.def.unlock.taskid] : null;
+                    task.history.x = offsettask ? offsettask.history.x + 60 : player.history.nextMiscX;
+                    task.history.y = offsettask ? offsettask.history.y : (player.history.nextMiscY += 60);
+                }
             }
-        }
-    });
+        });
+
+    }
 
     if (!hoveredTaskStillVisible) {
         hoveredOverTask = null;
@@ -222,6 +237,8 @@ function resetPlayer() {
     Object.entries(game.alltasks).forEach(e => {
         var task = e[1];
 
+        task.history.mode = 'locked';
+
         if (task.def.achievement) { // only achievements directly impact new lives.
             if (task.history.maxlevel > 0) {
                 if (task.def.newlifeResources) {
@@ -235,6 +252,8 @@ function resetPlayer() {
             }
         }
     });
+
+    checkVisibleTasks();
 
     player.tools = {};
     // tools all reset to 0 on new life.
@@ -273,6 +292,7 @@ function killPlayer(description) {
     player.pastlives = (player.pastlives||0) + 1;
 
     resetPlayer();
+    window.localStorage.setItem("player", btoa(JSON.stringify(player)));
 }
 
 function refreshStats()
@@ -356,6 +376,10 @@ var update = function(elapsed) {
 var hintImage = new Image();
 hintImage.onload = function() { needRedraw = true; }
 hintImage.src = "images/hint.png"
+var lockImage = new Image();
+lockImage.onload = function() { needRedraw = true; }
+lockImage.src = "images/lock.png"
+
 var draw = function() {
     needRedraw = false;
     canvas.width = canvasdiv.offsetWidth;
@@ -372,22 +396,51 @@ var draw = function() {
     game.tasks.forEach(task => {
         var image = task.def.img;
         if (image == null) {
-            task.def.img = new Image();
-            if (!task.history.hintmode) {
+            if (!(task.history.mode=='hintmode')) {
+                task.def.img = new Image();
                 task.def.img.onload = function() {
-                    ctx.drawImage(task.def.img, task.history.x-25, task.history.y-25, 50, 50);
+                    needRedraw = true;
                     task.def.img.onload = null;
                 }
+                task.def.img.src = task.def.imageUrl;
+                return;
             }
-            task.def.img.src = task.def.imageUrl;
-            return;
         }
 
-        if (task.history.hintmode) {
+        if (task.history.mode=='hintmode') {
             image = hintImage;
         }
 
         ctx.drawImage(image, task.history.x-25, task.history.y-25, 50, 50);
+
+        if (task.history.mode=='locked' || task.history.mode=='completed') {
+            ctx.globalAlpha = 0.8
+            ctx.beginPath();
+            ctx.moveTo(task.history.x, task.history.y);
+            ctx.lineTo(task.history.x, task.history.y + 25);
+            ctx.arc(task.history.x, task.history.y, 25, -0.5*Math.PI, 2 * Math.PI - 0.5*Math.PI, true);
+            ctx.lineTo(task.history.x, task.history.y);
+            ctx.fill();
+            ctx.globalAlpha = 1
+        }
+
+        if (task.history.mode=='locked') {
+            ctx.drawImage(lockImage, task.history.x, task.history.y, 25, 25);
+            ctx.globalAlpha = 1
+        }
+
+        if (task.history.mode=='completed') {
+            ctx.globalAlpha = 0.6
+            ctx.beginPath();
+            ctx.moveTo(task.history.x-5, task.history.y+10);
+            ctx.lineTo(task.history.x+10, task.history.y+20);
+            ctx.lineTo(task.history.x+20, task.history.y-5);
+            ctx.lineWidth = 10;
+            ctx.strokeStyle = '#00AA00';
+            ctx.stroke();
+            ctx.fillStyle = "#222222";
+            ctx.globalAlpha = 1
+        }
 
         if (task.def.taskid === player.activetaskid) {
             var pctComplete = task.life.yearsWorked / computeCompletionYears(task);
@@ -451,7 +504,7 @@ function updateTooltipText() {
 
     needRedraw = true; // i was getting sick of my CPU running at 100%, so game updates don't trigger draw updates if they don't need to?
 
-    if (hoveredOverTask.history.hintmode) {
+    if (hoveredOverTask.history.mode=='hintmode') {
         tooltip.innerHTML = hoveredOverTask.def.hint;
         return;
     }
@@ -479,7 +532,7 @@ function updateTooltipText() {
         }
     }
 
-    tooltip.innerHTML = hoveredOverTask.def.name + priorLevelDetailString + "<br/>"
+    tooltip.innerHTML = hoveredOverTask.def.name + priorLevelDetailString + (hoveredOverTask.history.mode=='locked' ? "(LOCKED)" : "") + "<br/>"
                    + (hoveredOverTask.history.evercompleted ? hoveredOverTask.def.description : hoveredOverTask.def.predescription) + "<br/>"
                    + "Takes " + Math.round(computeCompletionYears(hoveredOverTask)*100)/100 + " years<br/>"
                    + (hoveredOverTask.def.completionCosts ? "Doing this would cost...<br/>" + Object.entries(hoveredOverTask.def.completionCosts).map(e => e[0] + ": " + (Math.round(computeCompletionCost(hoveredOverTask, e[1])*10)/10)) + "<br/>" : "")
@@ -541,7 +594,7 @@ function verifyTasks() {
 function startGame() {
     game = {alltasks:{},startage:18,maxage:35};
     var allowLoop = 1; // for easy "pause the game so I can debug state" (may never be useful again who knows)
-    var allowLoad = 0; // for easy "force a state reset"
+    var allowLoad = 1; // for easy "force a state reset"
     if (allowLoad && window.localStorage.getItem("player")) {
         json = atob(window.localStorage.getItem("player"));
         player = JSON.parse(json);
@@ -808,7 +861,9 @@ function startGame() {
 
 var handleMouseClick = function(e) {
     var clickedTask = findClosestTask(e)
-    if (clickedTask && clickedTask.history.hintmode) return;
+    if (clickedTask && clickedTask.history.mode=='hintmode') return;
+    if (clickedTask && clickedTask.history.mode=='locked') return;
+    if (clickedTask && clickedTask.history.mode=='completed') return;
 
     doTask(clickedTask);
 }
