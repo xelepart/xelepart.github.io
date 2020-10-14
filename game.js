@@ -15,6 +15,7 @@ var miscResourcesSpan = document.getElementById("MiscResources");
 var miscSkillsSpan = document.getElementById("MiscSkills");
 var miscToolsSpan = document.getElementById("MiscTools");
 var totalLivesSpan = document.getElementById("TotalLives");
+var dieYoungButton = document.getElementById("dieyoung");
 var ageValueSpan = document.getElementById("age");
 var ageLabelSpan = document.getElementById("agelabel");
 
@@ -96,12 +97,16 @@ var checkVisibleTasks = function() {
             var taskLevelPrereqMet = task.def.unlock !== null && (task.def.unlock.taskid && task.def.unlock.level && game.alltasks[task.def.unlock.taskid].life.level >= task.def.unlock.level);
             var resourcePrereqMet = task.def.unlock !== null && (task.def.unlock.resourceName && player.resources[task.def.unlock.resourceName] >= task.def.unlock.amount);
             var historicTaskLevelPrereqMet = task.def.unlock !== null && (task.def.unlock.taskid && task.def.unlock.historiclevel && game.alltasks[task.def.unlock.taskid].history.maxlevel >= task.def.unlock.historiclevel);
-            var prereqMet = taskLevelPrereqMet || resourcePrereqMet || historicTaskLevelPrereqMet;
+            var parentTasksAndUnlock = task.def.unlock !== null && (task.def.unlock.completedtasksand && task.def.unlock.completedtasksand.map((taskid) => game.alltasks[taskid].history.maxlevel > 0 || game.alltasks[taskid].life.level > 0).reduce((r,c)=>r&&c, true));
+            var prereqMet = taskLevelPrereqMet || resourcePrereqMet || historicTaskLevelPrereqMet || parentTasksAndUnlock;
 
             var permanentPreviousLive = (task.def.unlock !== null) && task.def.unlock.permanent && task.history.everlive;
 
             var actuallyVisible = freebie || active || prereqMet || permanentPreviousLive;
-            var hintmode = !actuallyVisible && task.def.parenttask && game.alltasks[task.def.parenttask.taskid].history.seen && !(game.alltasks[task.def.parenttask.taskid].history.mode=='hintmode');
+
+            var parenttaskHint = task.def.parenttask && game.alltasks[task.def.parenttask.taskid].history.seen && !(game.alltasks[task.def.parenttask.taskid].history.mode=='hintmode');
+            var parenttasksorHint = task.def.parenttasksor && task.def.parenttasksor.map((taskid) => game.alltasks[taskid].history.seen && !(game.alltasks[taskid].history.mode=='hintmode')).reduce((r,c)=>r||c, false);
+            var hintmode = parenttaskHint || parenttasksorHint;
             var previouslyDone = task.history.maxlevel > 0;
 
             if (actuallyVisible || hintmode || previouslyDone) {
@@ -145,6 +150,11 @@ var completeTask = function(task) {
     if (task.def.completionLearn != null) {
         for (skill in task.def.completionLearn) {
             if (!player.skills[skill]) {
+                if (!player.milestones.firstSkill) {
+                    sendMessage(game.milestones.firstSkill, true);
+                    player.milestones.firstSkill = 1;
+                }
+
                 player.skills[skill] = 0;
             }
             player.skills[skill] += task.def.completionLearn[skill];
@@ -154,6 +164,10 @@ var completeTask = function(task) {
     if (task.def.completionTools != null) {
         for (tool in task.def.completionTools) {
             if (!player.tools[tool]) {
+                if (!player.milestones.firstTool) {
+                    sendMessage(game.milestones.firstTool, true);
+                    player.milestones.firstTool = 1;
+                }
                 player.tools[tool] = 0;
             }
             player.tools[tool] += task.def.completionTools[tool];
@@ -163,7 +177,11 @@ var completeTask = function(task) {
     task.life.level++;
 
     if (!task.history.evercompleted) {
-        sendMessage("<i>" + task.def.predescription + "</i><br>" + task.def.completionstory, false);
+        if (!player.milestones.firstAchievement && task.def.achievement) {
+            sendMessage(game.milestones.firstAchievement, true);
+            player.milestones.firstAchievement = 1;
+        }
+        sendMessage("<i>" + task.def.predescription + "</i><br/>" + task.def.completionstory, false);
         task.history.evercompleted = true;
     }
 
@@ -176,6 +194,11 @@ var doTask = function(task) {
     if (task === null) return;
     if (player.activetaskid !== null) return;
     if (!task.def.repeatable && task.level > 0) return;
+
+    if (!player.milestones.firstImprovedRepeatable && task.repeatable && task.history.maxlevel > 0) {
+        sendMessage(game.milestones.firstImprovedRepeatable, true);
+        player.milestones.firstImprovedRepeatable = 1;
+    }
 
     if (task.def.completionCosts) {
         var missingResources = false;
@@ -205,7 +228,6 @@ var doTask = function(task) {
 
 function sendMessage(text, popup) {
     if (popup) {
-        console.log("Okay...");
         popupText.innerHTML = text;
         popupDiv.style.display="block";
         var position = 1;
@@ -275,7 +297,12 @@ function resetPlayer() {
 }
 
 function killPlayer(description) {
-    if (description) sendMessage(description, true);
+    if (description) {
+        if (!player.milestones.firstDeath) {
+            sendMessage(game.milestones.firstDeath, true);
+            player.milestones.firstDeath = 1;
+        } else sendMessage(description, true);
+    }
 
     Object.entries(game.alltasks).forEach(e => {
         var task = e[1];
@@ -319,6 +346,7 @@ function refreshStats()
     }
 
     if (player.pastlives > 2) {
+        dieYoungButton.style.display = "inline";
         totalLivesSpan.innerHTML = " (life #" + (player.pastlives + 1 + ")");
     }
 
@@ -604,7 +632,7 @@ function checkAndHardReset() {
 }
 
 function hardReset() {
-    player = {tasks:{},resources:{},skills:{},tools:{},activetaskid:null,history:{nextMiscX:300,nextMiscY:100,camscale:2,camtransx:-500,camtransy:-250,skills:{},tools:{}}}
+    player = {tasks:{},resources:{},skills:{},tools:{},activetaskid:null,milestones:{},history:{nextMiscX:300,nextMiscY:100,camscale:2,camtransx:-500,camtransy:-250,skills:{},tools:{}}}
     Object.entries(game.alltasks).forEach(e => {
         var task = e[1];
         task.life = {level:0};
@@ -618,6 +646,13 @@ function hardReset() {
 function startGame() {
     trackTransforms(ctx);
     game = {alltasks:{},startage:18,maxage:35};
+    game.milestones = {
+        firstDeath:"Well, congratulations, you died! Generally speaking in this game, death is progression. Now you get to live your life again, but you know so much more about the things you spent your last life working on. For instance, you won't need to spend four years farming a stone-filled field, you can dive straight into clearing our those stones! So many more years to spend on that stone-free farmland!",
+        firstImprovedRepeatable:"Okay, so, here's a quick overview of what we're calling groundhog bonuses. The highest level you've ever gotten a given task in a <b>previous life</b> improves your ability with the task. Sometimes, the tasks will take less time. Sometimes, they will produce more resources. Sometimes, they will cost fewer resources. Sometimes? All three! So, maybe it's a good time to learn how to farm that stone-free farm *really* well!",
+        firstSkill:"You've learned a skill! Skills work slightly differently from our standard task groundhog progression. <br/>First, and most importantly, they impact <b>all</b> tasks that are related to the skill. The <i>farming</i> skill will improve every farming task you do. (That includes farms, moving stones, or even selling wheat! (I imagine it as, like, better looking wheat bundles thanks to your amazing tools, so they just fly off the shelves?)) <br/>Second, skills <b>only</b> increase the <b>resources produced</b> by the task.<br/>And third, the skills impact you in the same life you learn them, and you will start each life with 10% of the max-ever-skill. This is very different from task-specific groundhog bonuses! <br/>Last, if you get skills repeatedly (even from different sources/tasks), they will add up. Use that to your advantage!",
+        firstTool:"Ooo, tools! Tools are, yet again, unique from skills and groundhog bonuses. <br/>First, tools, like skills, improve all tasks that are related to the tool - so farming tools improve all farming tasks. <br/>Second, and probably most important, tools have <b>no restart bonus</b> (you don't magically start a new life with tools just because you had them in a past life!) <br/>Third, tools <b>only</b> reduce the <b>time taken</b> to execute a task! A 1 acre farm will produce the same amount of wheat whether you're doing it by hand or with a scythe, but you will spend a lot less time with the tool. At least, that's the idea. Let's not be too nitpicky or pedantic here. <br/>Last, tools do not add up. Getting a dull scythe does not help you if you already have a sharp one, and having a dull scythe before you find a sharp one doesn't make the sharp one better! So, keep that in mind if you've got multiple options for tools!",
+        firstAchievement:"ACHIEVEMENT UNLOCKED! In this game, achievements are permanent, logic-defying, story-breaking bonuses that will impact every life you ever live after unlocking them. Generally, you will get them for completing a story line, or doing something silly, etc. Some achievements are even hidden (no hint guiding the way!) - enjoy your reward!"
+    };
     var allowLoop = 1; // for easy "pause the game so I can debug state" (may never be useful again who knows)
     var allowLoad = 1; // for easy "force a state reset"
     if (allowLoad && window.localStorage.getItem("player")) {
@@ -861,7 +896,6 @@ function startGame() {
 
 
     if (false) {
-        player.resources.test=100;
         registerTaskDefinition({
             taskid:"dev",
             imageUrl:'images/dev.png',
@@ -873,7 +907,9 @@ function startGame() {
             completionLearn:null,
             completionTools:{farming:10},
             completionYears:1,
-            unlock:null,
+            unlock:{completedtasksand:["sellwheat","farm2"]},
+            parenttasksor:["sellwheat","farm2"],
+            hint:"This is THE DEV TASK",
             name:"Dev Test Task",
             predescription:"This shouldn't generally be in the live game, if it is let the devs know 'cause we left dev mode on.",
             completionstory:"You did a dev test!",
