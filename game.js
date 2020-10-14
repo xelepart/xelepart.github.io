@@ -205,8 +205,21 @@ var doTask = function(task) {
 
 function sendMessage(text, popup) {
     if (popup) {
+        console.log("Okay...");
         popupText.innerHTML = text;
-//        popupDiv.style.display="block";
+        popupDiv.style.display="block";
+        var position = 1;
+        var timePerShift = 8;
+        var shiftSize = 2;
+        interval = setInterval(function () {
+            position += shiftSize;
+            popupDiv.style.top = (position - popupDiv.offsetHeight) +  "px";
+        }, timePerShift);
+                
+        var numTicks = (popupDiv.offsetHeight + 20) / shiftSize;
+        var dropTime = timePerShift * numTicks;
+        setTimeout(function () {clearInterval(interval);}, dropTime);
+
     }
 
     messageBlock = document.getElementById("messages")
