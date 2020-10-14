@@ -381,18 +381,16 @@ var lockImage = new Image();
 lockImage.onload = function() { needRedraw = true; }
 lockImage.src = "images/lock.png"
 
+canvas.width = 3000;//canvasdiv.offsetWidth;
+canvas.height = 3000;//canvasdiv.offsetHeight;
+
 var draw = function() {
     needRedraw = false;
-    canvas.width = canvasdiv.offsetWidth;
-    canvas.height = canvasdiv.offsetHeight;
 
-//    ctx.save();
-
+    var p1 = ctx.transformedPoint(0,0);
+    var p2 = ctx.transformedPoint(canvas.width,canvas.height);
     ctx.fillStyle = "#222222";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.translate(player.history.camtransx, player.history.camtransy);
-    ctx.scale(player.history.camscale, player.history.camscale);
+    ctx.fillRect(p1.x,p1.y,p2.x-p1.x,p2.y-p1.y);
 
     game.tasks.forEach(task => {
         var image = task.def.img;
@@ -479,18 +477,14 @@ function findClosestTask(evt) {
     var x = event.clientX - rect.left;
     var y = event.clientY - rect.top;
 
-    x = x - player.history.camtransx;
-    y = y - player.history.camtransy;
-
-    x = x / player.history.camscale;
-    y = y / player.history.camscale;
+    var pt = ctx.transformedPoint(x,y);
 
     var closestTask = null;
     var closestClick = 25.1;
 
     game.tasks.forEach(task => {
-        xd = task.history.x - x;
-        yd = task.history.y - y;
+        xd = task.history.x - pt.x;
+        yd = task.history.y - pt.y;
         d = Math.sqrt(xd*xd+yd*yd)
         if (d < closestClick) {
             closestClick = d;
@@ -878,8 +872,6 @@ function startGame() {
     var dragStart,dragged;
     canvas.addEventListener('mousedown',function(evt){
         document.body.style.mozUserSelect = document.body.style.webkitUserSelect = document.body.style.userSelect = 'none';
-        lastX = evt.offsetX || (evt.pageX - canvas.offsetLeft);
-        lastY = evt.offsetY || (evt.pageY - canvas.offsetTop);
         var rect = canvas.getBoundingClientRect();
         var x = event.clientX - rect.left;
         var y = event.clientY - rect.top;
@@ -887,14 +879,11 @@ function startGame() {
         lastY = y
         dragStart = ctx.transformedPoint(lastX,lastY);
         dragged = false;
-        console.log("Started dragging at " + lastX);
     },false);
     canvas.addEventListener('mousemove',function(evt){
         var rect = canvas.getBoundingClientRect();
         var x = event.clientX - rect.left;
         var y = event.clientY - rect.top;
-        lastX = evt.offsetX || (evt.pageX - canvas.offsetLeft);
-        lastY = evt.offsetY || (evt.pageY - canvas.offsetTop);
         lastX = x;
         lastY = y
         dragged = true;
@@ -902,14 +891,12 @@ function startGame() {
             var pt = ctx.transformedPoint(lastX,lastY);
             ctx.translate(pt.x-dragStart.x,pt.y-dragStart.y);
             draw();
-            console.log("Theoretically dragging ");
-            console.log(pt);
-            console.log(dragStart);
+            needRedraw = true;
         }
     },false);
     canvas.addEventListener('mouseup',function(evt){
         dragStart = null;
-        if (!dragged) zoom(evt.shiftKey ? -1 : 1 );
+//        if (!dragged) zoom(evt.shiftKey ? -1 : 1 );
     },false);
 
     var scaleFactor = 1.1;
@@ -1001,7 +988,7 @@ function trackTransforms(ctx){
         xform.f = f;
         return setTransform.call(ctx,a,b,c,d,e,f);
     };
-    var pt  = svg.createSVGPoint();
+    var pt = svg.createSVGPoint();
     ctx.transformedPoint = function(x,y){
         pt.x=x; pt.y=y;
         return pt.matrixTransform(xform.inverse());
