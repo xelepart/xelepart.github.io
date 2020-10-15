@@ -699,6 +699,7 @@ function startGame() {
             json = atob(window.localStorage.getItem("player"));
             // TODO : probably want to, like, save their progress and fix our failed version upgrade process in V2+?
             player = JSON.parse(json);
+            if (!player.milestones) player.milestones = {};
         } catch(err) {
             hardReset();
         }
