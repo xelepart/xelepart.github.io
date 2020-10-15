@@ -1,0 +1,7 @@
+html, body, .r_flex_container {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background: black;
+    margin: 0;
+}

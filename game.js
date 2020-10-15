@@ -5,6 +5,8 @@ var player = null;
 // UI elements (should probably load all these in startGame() once, but the internet says one of the biggest/most common
 // efficiency failures in html5 games is re-fetching DOM elements,
 // so figured we should do this one particular premature optimization.
+window.onresize = () => { needRedraw = true } // should this be an addeventlistener thing in game startup?
+
 var canvasdiv = document.getElementById("canvasdiv");
 var canvas = document.getElementById("canvas");
 var ctx = canvas.getContext("2d");
@@ -21,11 +23,16 @@ var ageLabelSpan = document.getElementById("agelabel");
 
 var tooltip = document.getElementById("tooltip");
 
+var oldMessagesBlock = document.getElementById("messages")
+var latestMessageBlock = document.getElementById("latestMessage")
+var messagesScrollBlock = document.getElementById("messagesScroll")
+
+
 var needRedraw = true; // this is the "UI is dirty" flag, 'cause nobody likes games that run at 100% cpu...
 
 //GAMESPEED_RATIO = 1 / (5 * 60 * 1000)  // 1 year every 5 minutes in ms
 //GAMESPEED_RATIO = 1 / (1 * 1000)  // 1 year every 1 seconds in ms
-GAMESPEED_RATIO = 1 / (1 * 250)  // 1 year every .1 seconds in ms
+GAMESPEED_RATIO = 1 / (1 * 100)  // 1 year every .1 seconds in ms
 
 var computeResourceGeneration = function(task, resourceName, rawAmount) {
     if (!player.resources[resourceName]) {
@@ -121,8 +128,13 @@ var checkVisibleTasks = function() {
                     needRedraw = true;
                     task.history.seen = true;
                     offsettask = task.def.parenttaskid ? game.alltasks[task.def.parenttaskid] : task.def.unlock && task.def.unlock.taskid ? game.alltasks[task.def.unlock.taskid] : null;
-                    task.history.x = offsettask ? offsettask.history.x + 60 : player.history.nextMiscX;
-                    task.history.y = offsettask ? offsettask.history.y : (player.history.nextMiscY += 60);
+                    if (offsettask) {
+                        task.history.x = offsettask.history.x + (task.def.parentoffset ? task.def.parentoffset.x : 60);
+                        task.history.y = offsettask.history.y + (task.def.parentoffset ? task.def.parentoffset.y : 0);
+                    } else {
+                        task.history.x = player.history.nextMiscX;
+                        task.history.y = (player.history.nextMiscY += 60);
+                    }
                 }
             }
         });
@@ -181,7 +193,7 @@ var completeTask = function(task) {
             sendMessage(game.milestones.firstAchievement, true);
             player.milestones.firstAchievement = 1;
         }
-        sendMessage("<i>" + task.def.predescription + "</i><br/>" + task.def.completionstory, false);
+        sendMessage(task.def.name + ":<br/><i>" + task.def.predescription + "</i><br/>Result: " + task.def.completionstory, false);
         task.history.evercompleted = true;
     }
 
@@ -226,6 +238,10 @@ var doTask = function(task) {
     task.life.yearsWorked = 0;
 }
 
+
+// new idea: Keep last X messages, and a "most recent message count", only keep messages back 10. We need a real "show the whole story" UI anyway.
+var lastMessage = null;
+var repeatMessageCount = 0;
 function sendMessage(text, popup) {
     if (popup) {
         popupText.innerHTML = text;
@@ -241,12 +257,19 @@ function sendMessage(text, popup) {
         var numTicks = (popupDiv.offsetHeight + 20) / shiftSize;
         var dropTime = timePerShift * numTicks;
         setTimeout(function () {clearInterval(interval);}, dropTime);
-
     }
 
-    messageBlock = document.getElementById("messages")
-    messageBlock.innerHTML = messageBlock.innerHTML + "<br/>" + text + "<br/>";
-    messageBlock.scrollTo(0,999999);
+    if (lastMessage === text) {
+        repeatMessageCount++;
+    } else {
+        if (lastMessage != null) oldMessagesBlock.innerHTML = (oldMessagesBlock.innerHTML || "") + "<br/>" + lastMessage + (repeatMessageCount > 1 ? ("(" + repeatMessageCount + ")") : "") + "<br/>";
+        repeatMessageCount = 1;
+    }
+
+    latestMessageBlock.innerHTML = "<br/>" + text + (repeatMessageCount > 1 ? ("(" + repeatMessageCount + ")") : "");
+    lastMessage = text;
+
+    messagesScrollBlock.scrollTo(0,99999999);
 }
 
 function closePopup() {
@@ -332,8 +355,12 @@ function killPlayer(description) {
     player.pastlives = (player.pastlives||0) + 1;
 
     resetPlayer();
-    window.localStorage.setItem("player", btoa(JSON.stringify(player)));
+    save();
     needRedraw = true;
+}
+
+function save() {
+    window.localStorage.setItem("player", btoa(JSON.stringify(player)));
 }
 
 function refreshStats()
@@ -348,6 +375,8 @@ function refreshStats()
     if (player.pastlives > 2) {
         dieYoungButton.style.display = "inline";
         totalLivesSpan.innerHTML = " (life #" + (player.pastlives + 1 + ")");
+    } else {
+        dieYoungButton.style.display = "none";
     }
 
     // how should we order these? Most recently gained? Manual list? Alphabetical? Most-owned? order-originally-seen maintained over history, with maybe optional reordering?
@@ -408,11 +437,11 @@ var update = function(elapsed) {
         player.age += yearsElapsed;
 
         if (player.age >= game.maxage) {
-            killPlayer("Oh no! You died of old age! Blah blah blah story wtf you're " + game.startage + " again");
+            killPlayer("You died of old age (it was a harsher time...) - and yet, you live again...");
         }
     }
     refreshStats();
-    if (shouldSave) window.localStorage.setItem("player", btoa(JSON.stringify(player)));
+    if (shouldSave) save();
 }
 
 var hintImage = new Image();
@@ -422,16 +451,22 @@ var lockImage = new Image();
 lockImage.onload = function() { needRedraw = true; }
 lockImage.src = "images/lock.png"
 
-canvas.width = 3000;//canvasdiv.offsetWidth;
-canvas.height = 3000;//canvasdiv.offsetHeight;
-
 var draw = function() {
     needRedraw = false;
 
-    var p1 = ctx.transformedPoint(0,0);
-    var p2 = ctx.transformedPoint(canvas.width,canvas.height);
-    ctx.fillStyle = "#222222";
-    ctx.fillRect(p1.x,p1.y,p2.x-p1.x,p2.y-p1.y);
+    var oldW = canvas.width;
+    var oldH = canvas.height;
+
+    // we reset this every time because it resets the context, which we scale/translate every time.
+    canvas.width = Math.min(window.innerWidth-299, canvasdiv.offsetWidth-1);
+    canvas.height = Math.min(window.innerHeight,canvasdiv.offsetHeight-1);
+
+    if (canvas.width != oldW || canvas.height != oldH) {
+        needRedraw = true;
+    }
+
+    ctx.translate(player.history.camtransx, player.history.camtransy);
+    ctx.scale(player.history.camscale, player.history.camscale);
 
     game.tasks.forEach(task => {
         var image = task.def.img;
@@ -518,14 +553,18 @@ function findClosestTask(evt) {
     var x = event.clientX - rect.left;
     var y = event.clientY - rect.top;
 
-    var pt = ctx.transformedPoint(x,y);
+    x = x - player.history.camtransx;
+    y = y - player.history.camtransy;
+
+    x = x / player.history.camscale;
+    y = y / player.history.camscale;
 
     var closestTask = null;
     var closestClick = 25.1;
 
     game.tasks.forEach(task => {
-        xd = task.history.x - pt.x;
-        yd = task.history.y - pt.y;
+        xd = task.history.x - x;
+        yd = task.history.y - y;
         d = Math.sqrt(xd*xd+yd*yd)
         if (d < closestClick) {
             closestClick = d;
@@ -644,7 +683,6 @@ function hardReset() {
 }
 
 function startGame() {
-    trackTransforms(ctx);
     game = {alltasks:{},startage:18,maxage:35};
     game.milestones = {
         firstDeath:"Well, congratulations, you died! Generally speaking in this game, death is progression. Now you get to live your life again, but you know so much more about the things you spent your last life working on. For instance, you won't need to spend four years farming a stone-filled field, you can dive straight into clearing our those stones! So many more years to spend on that stone-free farmland!",
@@ -876,13 +914,76 @@ function startGame() {
         completionLearn:null,
         completionTools:null,
         completionYears:0.25,
+        categories:null,
         unlock:{taskid:"farm2", level:20, permanent:true},
         parenttask:{taskid:"farm2"},
+        parentoffset:{x:180,y:0},
+        name:"Squire",
         hint:"You would need to be so good at farming for this. Like, it requires such a good farm, you might not even be able to do it without some kind of help.",
-        name:"Become a Squire",
         predescription:"A knight passes by the growing farm and notices the strength that can only come from years of hard labor clearing a farm the hard way. \"You could handle yourself in the melee, young one,\" he comments as he heads into the city. \"Think on it.\"",
-        completionstory:"You've become a squire! B hasn't written the squire story path yet, so this is the end of the line over here in squire land (but probably more to do in farmer land!). But, like. It's gonna be cool.",
-        description:"I. AM. SQUIRE.",
+        completionstory:"Squiring is hard work, but somebody has to do it, B write more story here",
+        description:"Drudge away future Ser!",
+    });
+
+    registerTaskDefinition({
+        taskid:"swordsstart",
+        imageUrl:'images/swords.png',
+        repeatable:true,
+        passiveGeneration:null,
+        completionCosts:null,
+        completionGeneration:null,
+        completionLearn:null,
+        completionTools:null,
+        completionYears:0.5,
+        categories:null,
+        unlock:{taskid:"squirestart", level:1, permanent:true},
+        parenttask:{taskid:"squirestart"},
+        parentoffset:{x:-60,y:60},
+        name:"Swords",
+        hint:"Once you are a Squire...",
+        predescription:"A knight must understand how to wield and ultimately defend against all manner of blades.",
+        completionstory:"You understand a little bit more about swordplay. Man these things are HEAVY!",
+        description:"You focus your time on different types of blades, begin to understand the training path ahead of you.",
+    });
+    registerTaskDefinition({
+        taskid:"etiquettestart",
+        imageUrl:'images/etiquette.png',
+        repeatable:true,
+        passiveGeneration:null,
+        completionCosts:null,
+        completionGeneration:null,
+        completionLearn:null,
+        completionTools:null,
+        completionYears:0.5,
+        categories:null,
+        unlock:{taskid:"squirestart", level:1, permanent:true},
+        parenttask:{taskid:"squirestart"},
+        parentoffset:{x:0,y:60},
+        name:"Etiquette",
+        hint:"Once you are a Squire...",
+        predescription:"A knight must understand how to navigate the delicate social web of nobility.",
+        completionstory:"You understand almost nothing about etiquette other than it is hard to say, harder to spell and confusing.",
+        description:"You focus your time on comprehending the rules behind these silly approaches to life those in the court uphold.",
+    });
+    registerTaskDefinition({
+        taskid:"drudgerystart",
+        imageUrl:'images/drudgery.png',
+        repeatable:true,
+        passiveGeneration:null,
+        completionCosts:null,
+        completionGeneration:null,
+        completionLearn:null,
+        completionTools:null,
+        completionYears:0.5,
+        categories:null,
+        unlock:{taskid:"squirestart", level:1, permanent:true},
+        parenttask:{taskid:"squirestart"},
+        parentoffset:{x:60,y:60},
+        name:"Drudgery",
+        hint:"Once you are a Squire...",
+        predescription:"A Squire must do all sorts of nonsense for his Knight.  It will be worth it.  Hopefully.",
+        completionstory:"You understand a little bit more about what sort of nonsense your new life entails",
+        description:"You focus your time on chasing the never ending tasks set you by your Knight.",
     });
 
     verifyTasks();
@@ -893,6 +994,7 @@ function startGame() {
     } else {
         refreshStats();
     }
+
 
 
     if (false) {
@@ -919,62 +1021,41 @@ function startGame() {
 
     checkVisibleTasks();
 
-    canvas.addEventListener('click', handleMouseClick, false);
-    canvas.addEventListener('mousemove', handleMouseMove, false);
     popup.addEventListener('click', closePopup, false);
 
-    var lastX=canvas.width/2, lastY=canvas.height/2;
-    var dragStart,dragged;
-    canvas.addEventListener('mousedown',function(evt){
-        document.body.style.mozUserSelect = document.body.style.webkitUserSelect = document.body.style.userSelect = 'none';
-        var rect = canvas.getBoundingClientRect();
-        var x = event.clientX - rect.left;
-        var y = event.clientY - rect.top;
-        lastX = x;
-        lastY = y
-        dragStart = ctx.transformedPoint(lastX,lastY);
-        dragged = false;
-    },false);
-    canvas.addEventListener('mousemove',function(evt){
-        var rect = canvas.getBoundingClientRect();
-        var x = event.clientX - rect.left;
-        var y = event.clientY - rect.top;
-        lastX = x;
-        lastY = y
-        dragged = true;
-        if (dragStart){
-            var pt = ctx.transformedPoint(lastX,lastY);
-            ctx.translate(pt.x-dragStart.x,pt.y-dragStart.y);
-            draw();
-            needRedraw = true;
-        }
-    },false);
-    canvas.addEventListener('mouseup',function(evt){
-        dragStart = null;
-//        if (!dragged) zoom(evt.shiftKey ? -1 : 1 );
-    },false);
+    canvas.addEventListener('click', handleMouseClick, false);
+    canvas.addEventListener('mousemove', handleMouseMove, false);
+
+    canvas.addEventListener('mousedown', handleMouseDown, false);
+    canvas.addEventListener('mouseup', handleMouseUp, false);
 
     var scaleFactor = 1.1;
     var zoom = function(clicks){
-        var pt = ctx.transformedPoint(lastX,lastY);
-        ctx.translate(pt.x,pt.y);
-        var factor = Math.pow(scaleFactor,clicks);
-        ctx.scale(factor,factor);
-        ctx.translate(-pt.x,-pt.y);
-        draw();
+//        var pt = ctx.transformedPoint(lastX,lastY);
+//        ctx.translate(pt.x,pt.y);
+//        var factor = Math.pow(scaleFactor,clicks);
+//        ctx.scale(factor,factor);
+//        ctx.translate(-pt.x,-pt.y);
+//        draw();
     }
 
     var handleScroll = function(evt){
-        var delta = evt.wheelDelta ? evt.wheelDelta/40 : evt.detail ? -evt.detail : 0;
-        if (delta) zoom(delta);
-        return evt.preventDefault() && false;
+//        var delta = evt.wheelDelta ? evt.wheelDelta/40 : evt.detail ? -evt.detail : 0;
+//        if (delta) zoom(delta);
+//        return evt.preventDefault() && false;
     };
     canvas.addEventListener('DOMMouseScroll',handleScroll,false);
     canvas.addEventListener('mousewheel',handleScroll,false);
     if (allowLoop) window.requestAnimationFrame(loop)
 }
 
+var lastX = null, lastY = null;
+var mouseIsDown = false, dragged = false;
+var hoveredOverTask = null;
+
 var handleMouseClick = function(e) {
+    if (dragged) return; // i tried putting this handle click logic in "mouseup" but it missed a lot of stuff i considered a click for some reason?
+
     var clickedTask = findClosestTask(e)
     if (clickedTask && clickedTask.history.mode=='hintmode') return;
     if (clickedTask && clickedTask.history.mode=='locked') return;
@@ -983,69 +1064,62 @@ var handleMouseClick = function(e) {
     doTask(clickedTask);
 }
 
-var hoveredOverTask = null;
-function handleMouseMove(e){
+var handleMouseDown = function(evt) {
+    document.body.style.mozUserSelect = document.body.style.webkitUserSelect = document.body.style.userSelect = 'none';
+    lastX = event.clientX;
+    lastY = event.clientY
+    mouseIsDown = true;
+    dragged = false;
+}
+
+function handleMouseMove(e) {
+    var previousX = lastX;
+    var previousY = lastY;
+    lastX = event.clientX;
+    lastY = event.clientY;
+
+    if (!mouseIsDown) {
+        hoveredOverTask = findClosestTask(e);
+
+        if (hoveredOverTask) {
+            showToolTip();
+        } else { // No task, hide tooltip
+            hideToolTip();
+        }
+    } else {
+        // nobody likes jitter drags.
+        if (Math.abs(lastX - previousX) + Math.abs(lastY - previousY) <= 3) return;
+
+        hideToolTip(); // tooltips while dragging felt weird
+        dragged = true;
+
+        var rect = canvas.getBoundingClientRect();
+
+        var dx = (lastX - previousX);
+        var dy = (lastY - previousY);
+
+        player.history.camtransx += dx;
+        player.history.camtransy += dy;
+
+        needRedraw = true;
+    }
+}
+
+var handleMouseUp = function(e) {
+    mouseIsDown = false;
+
+    if (dragged) save();
+
     hoveredOverTask = findClosestTask(e);
 
     if (hoveredOverTask) {
         showToolTip();
-    } else { // No task, hide tooltip
-        hideToolTip();
     }
 }
 
-function trackTransforms(ctx){
-    var svg = document.createElementNS("http://www.w3.org/2000/svg",'svg');
-    var xform = svg.createSVGMatrix();
-    ctx.getTransform = function(){ return xform; };
-    
-    var savedTransforms = [];
-    var save = ctx.save;
-    ctx.save = function(){
-        savedTransforms.push(xform.translate(0,0));
-        return save.call(ctx);
-    };
-    var restore = ctx.restore;
-    ctx.restore = function(){
-        xform = savedTransforms.pop();
-        return restore.call(ctx);
-    };
-
-    var scale = ctx.scale;
-    ctx.scale = function(sx,sy){
-        xform = xform.scaleNonUniform(sx,sy);
-        return scale.call(ctx,sx,sy);
-    };
-    var rotate = ctx.rotate;
-    ctx.rotate = function(radians){
-        xform = xform.rotate(radians*180/Math.PI);
-        return rotate.call(ctx,radians);
-    };
-    var translate = ctx.translate;
-    ctx.translate = function(dx,dy){
-        xform = xform.translate(dx,dy);
-        return translate.call(ctx,dx,dy);
-    };
-    var transform = ctx.transform;
-    ctx.transform = function(a,b,c,d,e,f){
-        var m2 = svg.createSVGMatrix();
-        m2.a=a; m2.b=b; m2.c=c; m2.d=d; m2.e=e; m2.f=f;
-        xform = xform.multiply(m2);
-        return transform.call(ctx,a,b,c,d,e,f);
-    };
-    var setTransform = ctx.setTransform;
-    ctx.setTransform = function(a,b,c,d,e,f){
-        xform.a = a;
-        xform.b = b;
-        xform.c = c;
-        xform.d = d;
-        xform.e = e;
-        xform.f = f;
-        return setTransform.call(ctx,a,b,c,d,e,f);
-    };
-    var pt = svg.createSVGPoint();
-    ctx.transformedPoint = function(x,y){
-        pt.x=x; pt.y=y;
-        return pt.matrixTransform(xform.inverse());
-    }
-}
+//var scrollToTop = function() {
+//    window.scrollTo(0,0);
+//    setTimeout(scrollToTop, 100);
+//}
+//
+//scrollToTop();
