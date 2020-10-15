@@ -27,7 +27,7 @@ var oldMessagesBlock = document.getElementById("messages")
 var latestMessageBlock = document.getElementById("latestMessage")
 var messagesScrollBlock = document.getElementById("messagesScroll")
 
-
+document.getElementById("jsv").innerHTML = "v0.01";
 var needRedraw = true; // this is the "UI is dirty" flag, 'cause nobody likes games that run at 100% cpu...
 
 //GAMESPEED_RATIO = 1 / (5 * 60 * 1000)  // 1 year every 5 minutes in ms
@@ -1115,7 +1115,6 @@ var handleMouseOut = function(e) {
 }
 
 var handleMouseUp = function(e) {
-
     if (dragged) save();
 
     hoveredOverTask = findClosestTask(e);
