@@ -1117,6 +1117,8 @@ var handleMouseOut = function(e) {
 var handleMouseUp = function(e) {
     if (dragged) save();
 
+    mouseIsDown = false;
+
     hoveredOverTask = findClosestTask(e);
 
     if (hoveredOverTask) {
