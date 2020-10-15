@@ -1025,9 +1025,9 @@ function startGame() {
 
     canvas.addEventListener('click', handleMouseClick, false);
     canvas.addEventListener('mousemove', handleMouseMove, false);
-
     canvas.addEventListener('mousedown', handleMouseDown, false);
     canvas.addEventListener('mouseup', handleMouseUp, false);
+    canvas.addEventListener('mouseout', handleMouseOut, false);
 
     var scaleFactor = 1.1;
     var zoom = function(clicks){
@@ -1105,8 +1105,15 @@ function handleMouseMove(e) {
     }
 }
 
-var handleMouseUp = function(e) {
+var handleMouseOut = function(e) {
+    if (dragged) save();
+
     mouseIsDown = false;
+    hoveredOverTask = null;
+    hideToolTip();
+}
+
+var handleMouseUp = function(e) {
 
     if (dragged) save();
 
