@@ -13,8 +13,11 @@ var ctx = canvas.getContext("2d");
 var popupText = document.getElementById("PopupText");
 var popupDiv = document.getElementById("popup");
 
+var resourcesHeader = document.getElementById("ResourcesHeader");
 var miscResourcesSpan = document.getElementById("MiscResources");
+var skillsHeader = document.getElementById("SkillsHeader");
 var miscSkillsSpan = document.getElementById("MiscSkills");
+var toolsHeader = document.getElementById("ToolsHeader");
 var miscToolsSpan = document.getElementById("MiscTools");
 var totalLivesSpan = document.getElementById("TotalLives");
 var dieYoungButton = document.getElementById("dieyoung");
@@ -31,8 +34,8 @@ document.getElementById("jsv").innerHTML = "v0.02";
 var needRedraw = true; // this is the "UI is dirty" flag, 'cause nobody likes games that run at 100% cpu...
 
 //GAMESPEED_RATIO = 1 / (5 * 60 * 1000)  // 1 year every 5 minutes in ms
-GAMESPEED_RATIO = 1 / (1 * 1000)  // 1 year every 1 seconds in ms
-//GAMESPEED_RATIO = 1 / (1 * 100)  // 1 year every .1 seconds in ms
+//GAMESPEED_RATIO = 1 / (1 * 1000)  // 1 year every 1 seconds in ms
+GAMESPEED_RATIO = 1 / (1 * 100)  // 1 year every .1 seconds in ms
 
 var computeResourceGeneration = function(task, resourceName, rawAmount) {
     if (!player.resources[resourceName]) {
@@ -92,6 +95,7 @@ var checkVisibleTasks = function() {
         recheck = false;
         Object.entries(game.alltasks).forEach(e => {
             var task = e[1];
+            if (game.tasks.includes(task)) return;
 
             var unlocked = task.def.achievement && (task.life.level > 0 || task.history.maxlevel > 0);
             if (unlocked) return; // we don't show unlocked achievements again?
@@ -384,21 +388,33 @@ function refreshStats()
     for (resource in player.resources) {
         miscResourcesSpanInnerHTML += resource + ": " + Math.round(player.resources[resource] * 10) / 10 + "</br>";
     }
-    if (miscResourcesSpanInnerHTML == "") miscResourcesSpanInnerHTML = "A whole lotta nothin'!";
+    if (miscResourcesSpanInnerHTML == "") {
+        resourcesHeader.style.display = "none";
+    } else {
+        resourcesHeader.style.display = "block";
+    }
     miscResourcesSpan.innerHTML = miscResourcesSpanInnerHTML;
 
     var miscSkillsSpanInnerHTML = "";
     for (skill in player.skills) {
         miscSkillsSpanInnerHTML += skill + ": " + Math.round(player.skills[skill] * 10) / 10 + "</br>";
     }
-    if (miscSkillsSpanInnerHTML == "") miscSkillsSpanInnerHTML = "Uh, breathing, I guess?";
+    if (miscSkillsSpanInnerHTML == "") {
+        skillsHeader.style.display = "none";
+    } else {
+        skillsHeader.style.display = "block";
+    }
     miscSkillsSpan.innerHTML = miscSkillsSpanInnerHTML;
 
     var miscToolsSpanInnerHTML = "";
     for (tool in player.tools) {
         miscToolsSpanInnerHTML += tool + ": " + Math.round(player.tools[tool] * 10) / 10 + "</br>";
     }
-    if (miscToolsSpanInnerHTML == "") miscToolsSpanInnerHTML = "Big, meaty hands.";
+    if (miscToolsSpanInnerHTML == "") {
+        toolsHeader.style.display = "none";
+    } else {
+        toolsHeader.style.display = "block";
+    }
     miscToolsSpan.innerHTML = miscToolsSpanInnerHTML;
 
     // improvement ideas:
@@ -566,6 +582,11 @@ function findClosestTask(evt) {
         xd = task.history.x - x;
         yd = task.history.y - y;
         d = Math.sqrt(xd*xd+yd*yd)
+
+        if (d < 25.1 && closestTask != null) {
+            console.log("WARNING: overlapping tasks! " + task.def.name + " vs. " + closestTask.def.name);
+        }
+
         if (d < closestClick) {
             closestClick = d;
             closestTask = task;
@@ -675,6 +696,7 @@ function checkAndHardReset() {
 }
 
 function hardReset() {
+    game.tasks = {};
     player = {tasks:{},resources:{},skills:{},tools:{},activetaskid:null,milestones:{},history:{nextMiscX:300,nextMiscY:100,camscale:2,camtransx:-500,camtransy:-250,skills:{},tools:{}}}
     Object.entries(game.alltasks).forEach(e => {
         var task = e[1];
@@ -780,7 +802,7 @@ function resetGame() {
         completionYears:0.5,
         categories:null,
         unlock:{resourceName:"wheat", amount:10, permanent:true},
-        parenttask:{taskid:"farm1"},
+//        parenttask:{taskid:"farm1"},
         hint:"If only you had a surplus of wheat...",
         name:"Sell Wheat",
         predescription:"Okay, you're starting to build up some wheat. There's probably a merchant in the city willing to take a cartload off your hands.",
@@ -800,7 +822,7 @@ function resetGame() {
         completionYears:10,
         categories:{farming:1},
         unlock:{resourceName:"gold", amount:1, permanent:true},
-        parenttask:{taskid:"sellwheat"},
+//        parenttask:{taskid:"sellwheat"},
         hint:"Wonder what you'd do with some money?",
         name:"Study Under Master Farmer",
         predescription:"While you were in the city selling your wheat, you saw an ad for a master farmer who would train up and coming farmers! It would be great to actually know how to farm instead of just kinda doing whatever? (HINT: This one's a tough one, you'll have to get really good at selling, and to do that you'd have to get really good at farming so you can spend as much time as possible selling...)",
@@ -841,6 +863,7 @@ function resetGame() {
         categories:{farming:1},
         unlock:{resourceName:"gold", amount:300, permanent:true},
         parenttask:{taskid:"farmingtools"},
+        parentoffset:{x:-60,y:60},
         hint:"Okay, with those tools, I bet you could get even better at farming, and even better at selling, and then...man, I bet you could make... dozens of gold! No, no. Hundreds! No, no. THREE hundred! (Also, until I put in milestone popups: Tools make associated tasks complete faster, so you can get more done in your life!)",
         name:"Hire Workers",
         predescription:"You've made quite a name for yourself, and become wealthy enough that when you visit town, many strangers approach you and ask if you need any help on the farm. You'd have to build a dormitory to house them, but it'd probably pay off in a few years?",
