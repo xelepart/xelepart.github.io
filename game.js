@@ -30,12 +30,12 @@ var oldMessagesBlock = document.getElementById("messages")
 var latestMessageBlock = document.getElementById("latestMessage")
 var messagesScrollBlock = document.getElementById("messagesScroll")
 
-document.getElementById("jsv").innerHTML = "v0.02";
+document.getElementById("jsv").innerHTML = "v0.03";
 var needRedraw = true; // this is the "UI is dirty" flag, 'cause nobody likes games that run at 100% cpu...
 
 //GAMESPEED_RATIO = 1 / (5 * 60 * 1000)  // 1 year every 5 minutes in ms
-//GAMESPEED_RATIO = 1 / (1 * 1000)  // 1 year every 1 seconds in ms
-GAMESPEED_RATIO = 1 / (1 * 100)  // 1 year every .1 seconds in ms
+GAMESPEED_RATIO = 1 / (1 * 1000)  // 1 year every 1 seconds in ms
+//GAMESPEED_RATIO = 1 / (1 * 100)  // 1 year every .1 seconds in ms
 
 var computeResourceGeneration = function(task, resourceName, rawAmount) {
     if (!player.resources[resourceName]) {
