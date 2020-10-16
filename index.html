@@ -1,7 +1,7 @@
 <html>
 <head><link rel="stylesheet" href="game.css"></head>
 <body style="margin:0;display:flex;">
-
+<input type="text" id="savestring" style="height:0;display:none">
 <div id="tooltip" onmouseover="javascript:showToolTip(hoveredOverTask);" style="position: absolute;z-index: 999;top:250px;left:210px;background-color:grey;border: 5px solid honeydew; user-select: none; max-width:50%; border-radius: 10px;padding:20px;display:none">Tooltip</div>
 <div id="popup" style="z-index: 4;position:absolute;left:5%;width:60%;background-color:grey;border: 5px solid blue; border-radius: 10px;padding:20px;display:none">
 	<div style="z-index: 5;position:absolute;top:-14px;left:-10px;background-color:grey;border: 2px solid honeydew; border-radius: 5px;padding:2px;display:black;cursor: pointer;">X</div>
@@ -28,8 +28,12 @@
 				<div id="latestMessage" style="color:White;">
 				</div>
 			</div>
-			<div>(v0.01:<span id="jsv"></span>)</div>
-			<button type="button" style="margin-top:20px" onclick="javascript:checkAndHardReset()">Hard Reset</button>
+			<div>
+				<button type="button" onclick="javascript:saveExport()">Export</button>
+				<button type="button" onclick="javascript:saveImport()">Import</button>
+				(v0.01:<span id="jsv"></span>)
+				<button type="button" style="margin-top:20px" onclick="javascript:checkAndHardReset()">Hard Reset</button>
+			</div>
 		</div>
 	</div>
 </div>

@@ -31,8 +31,8 @@ document.getElementById("jsv").innerHTML = "v0.02";
 var needRedraw = true; // this is the "UI is dirty" flag, 'cause nobody likes games that run at 100% cpu...
 
 //GAMESPEED_RATIO = 1 / (5 * 60 * 1000)  // 1 year every 5 minutes in ms
-GAMESPEED_RATIO = 1 / (1 * 1000)  // 1 year every 1 seconds in ms
-//GAMESPEED_RATIO = 1 / (1 * 100)  // 1 year every .1 seconds in ms
+//GAMESPEED_RATIO = 1 / (1 * 1000)  // 1 year every 1 seconds in ms
+GAMESPEED_RATIO = 1 / (1 * 100)  // 1 year every .1 seconds in ms
 
 var computeResourceGeneration = function(task, resourceName, rawAmount) {
     if (!player.resources[resourceName]) {
@@ -575,9 +575,13 @@ function findClosestTask(evt) {
 }
 
 function updateTooltipText() {
-    if (!hoveredOverTask) hideToolTip();
-
     needRedraw = true; // i was getting sick of my CPU running at 100%, so game updates don't trigger draw updates if they don't need to?
+
+    if (!hoveredOverTask)
+    {
+        hideToolTip();
+        return;
+    }
 
     if (hoveredOverTask.history.mode=='hintmode') {
         tooltip.innerHTML = hoveredOverTask.def.hint;
@@ -682,7 +686,7 @@ function hardReset() {
     killPlayer();
 }
 
-function startGame() {
+function resetGame() {
     game = {alltasks:{},startage:18,maxage:35};
     game.milestones = {
         firstDeath:"Well, congratulations, you died! Generally speaking in this game, death is progression. Now you get to live your life again, but you know so much more about the things you spent your last life working on. For instance, you won't need to spend four years farming a stone-filled field, you can dive straight into clearing our those stones! So many more years to spend on that stone-free farmland!",
@@ -691,7 +695,6 @@ function startGame() {
         firstTool:"Ooo, tools! Tools are, yet again, unique from skills and groundhog bonuses. <br/>First, tools, like skills, improve all tasks that are related to the tool - so farming tools improve all farming tasks. <br/>Second, and probably most important, tools have <b>no restart bonus</b> (you don't magically start a new life with tools just because you had them in a past life!) <br/>Third, tools <b>only</b> reduce the <b>time taken</b> to execute a task! A 1 acre farm will produce the same amount of wheat whether you're doing it by hand or with a scythe, but you will spend a lot less time with the tool. At least, that's the idea. Let's not be too nitpicky or pedantic here. <br/>Last, tools do not add up. Getting a dull scythe does not help you if you already have a sharp one, and having a dull scythe before you find a sharp one doesn't make the sharp one better! So, keep that in mind if you've got multiple options for tools!",
         firstAchievement:"ACHIEVEMENT UNLOCKED! In this game, achievements are permanent, logic-defying, story-breaking bonuses that will impact every life you ever live after unlocking them. Generally, you will get them for completing a story line, or doing something silly, etc. Some achievements are even hidden (no hint guiding the way!) - enjoy your reward!"
     };
-    var allowLoop = 1; // for easy "pause the game so I can debug state" (may never be useful again who knows)
     var allowLoad = 1; // for easy "force a state reset"
     if (allowLoad && window.localStorage.getItem("player")) {
         var json = null;
@@ -1021,7 +1024,12 @@ function startGame() {
     }
 
     checkVisibleTasks();
+}
 
+function startGame() {
+    resetGame();
+
+    // the rest of this is UI hooks...
     popup.addEventListener('click', closePopup, false);
 
     canvas.addEventListener('click', handleMouseClick, false);
@@ -1047,7 +1055,7 @@ function startGame() {
     };
     canvas.addEventListener('DOMMouseScroll',handleScroll,false);
     canvas.addEventListener('mousewheel',handleScroll,false);
-    if (allowLoop) window.requestAnimationFrame(loop)
+    window.requestAnimationFrame(loop)
 }
 
 var lastX = null, lastY = null;
@@ -1126,9 +1134,37 @@ var handleMouseUp = function(e) {
     }
 }
 
-//var scrollToTop = function() {
-//    window.scrollTo(0,0);
-//    setTimeout(scrollToTop, 100);
-//}
-//
-//scrollToTop();
+function saveExport() {
+    var txt = document.getElementById("savestring");
+
+    txt.style.display="block";
+    txt.value = btoa(JSON.stringify(player));
+
+    txt.select();
+    txt.setSelectionRange(0, 99999);
+
+    document.execCommand("copy");
+
+    txt.style.display="none";
+
+    alert("Your save string has been copied to your clipboard.");
+}
+
+function saveImport() {
+    var json = atob(prompt("Paste your save string in here."));
+
+    try {
+        obj = JSON.parse(json);
+        console.log(obj);
+        if (obj.age > 5) {
+            // assume that's enough to try to load it.
+
+            window.localStorage.setItem("player", btoa(json));
+            resetGame();
+            needRedraw = true;
+         }
+    } catch (e) {
+        console.log(e);
+        return;
+    }
+}
