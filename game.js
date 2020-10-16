@@ -211,7 +211,7 @@ var doTask = function(task) {
     if (player.activetaskid !== null) return;
     if (!task.def.repeatable && task.level > 0) return;
 
-    if (!player.milestones.firstImprovedRepeatable && task.repeatable && task.history.maxlevel > 0) {
+    if (!player.milestones.firstImprovedRepeatable && task.def.repeatable && (task.history.maxlevel > 0)) {
         sendMessage(game.milestones.firstImprovedRepeatable, true);
         player.milestones.firstImprovedRepeatable = 1;
     }
@@ -378,7 +378,7 @@ function refreshStats()
 
     if (player.pastlives > 2) {
         dieYoungButton.style.display = "inline";
-        totalLivesSpan.innerHTML = " (life #" + (player.pastlives + 1 + ")");
+        totalLivesSpan.innerHTML = " (life #" + (player.pastlives + ")");
     } else {
         dieYoungButton.style.display = "none";
     }
@@ -706,13 +706,14 @@ function hardReset() {
         player.tasks[task.taskid] = playertask;
     });
     killPlayer();
+    refreshStats();
 }
 
 function resetGame() {
     game = {alltasks:{},startage:18,maxage:35};
     game.milestones = {
         firstDeath:"Well, congratulations, you died! Generally speaking in this game, death is progression. Now you get to live your life again, but you know so much more about the things you spent your last life working on. For instance, you won't need to spend four years farming a stone-filled field, you can dive straight into clearing our those stones! So many more years to spend on that stone-free farmland!",
-        firstImprovedRepeatable:"Okay, so, here's a quick overview of what we're calling groundhog bonuses. The highest level you've ever gotten a given task in a <b>previous life</b> improves your ability with the task. Sometimes, the tasks will take less time. Sometimes, they will produce more resources. Sometimes, they will cost fewer resources. Sometimes? All three! So, maybe it's a good time to learn how to farm that stone-free farm *really* well!",
+        firstImprovedRepeatable:"Okay, so, here's a quick overview of what we're calling groundhog bonuses. The highest level you've ever gotten a given task in a <b>previous life</b> improves your ability with the task. Sometimes, the tasks will take less time. Sometimes, they will produce more resources. Sometimes, they will cost fewer resources. Sometimes? All three! So, maybe it's a good time to learn how to farm that stone-free farm <b>really</b> well! You know. For future yous.",
         firstSkill:"You've learned a skill! Skills work slightly differently from our standard task groundhog progression. <br/>First, and most importantly, they impact <b>all</b> tasks that are related to the skill. The <i>farming</i> skill will improve every farming task you do. (That includes farms, moving stones, or even selling wheat! (I imagine it as, like, better looking wheat bundles thanks to your amazing tools, so they just fly off the shelves?)) <br/>Second, skills <b>only</b> increase the <b>resources produced</b> by the task.<br/>And third, the skills impact you in the same life you learn them, and you will start each life with 10% of the max-ever-skill. This is very different from task-specific groundhog bonuses! <br/>Last, if you get skills repeatedly (even from different sources/tasks), they will add up. Use that to your advantage!",
         firstTool:"Ooo, tools! Tools are, yet again, unique from skills and groundhog bonuses. <br/>First, tools, like skills, improve all tasks that are related to the tool - so farming tools improve all farming tasks. <br/>Second, and probably most important, tools have <b>no restart bonus</b> (you don't magically start a new life with tools just because you had them in a past life!) <br/>Third, tools <b>only</b> reduce the <b>time taken</b> to execute a task! A 1 acre farm will produce the same amount of wheat whether you're doing it by hand or with a scythe, but you will spend a lot less time with the tool. At least, that's the idea. Let's not be too nitpicky or pedantic here. <br/>Last, tools do not add up. Getting a dull scythe does not help you if you already have a sharp one, and having a dull scythe before you find a sharp one doesn't make the sharp one better! So, keep that in mind if you've got multiple options for tools!",
         firstAchievement:"ACHIEVEMENT UNLOCKED! In this game, achievements are permanent, logic-defying, story-breaking bonuses that will impact every life you ever live after unlocking them. Generally, you will get them for completing a story line, or doing something silly, etc. Some achievements are even hidden (no hint guiding the way!) - enjoy your reward!"
