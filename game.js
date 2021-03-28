@@ -278,6 +278,7 @@ function sendMessage(text, popup) {
 
 function closePopup() {
     popupDiv.style.display="none";
+    draw();
 }
 
 function resetPlayer() {
@@ -357,7 +358,7 @@ function killPlayer(description) {
     });
 
     player.pastlives = (player.pastlives||0) + 1;
-
+    player.activetaskid = null
     resetPlayer();
     save();
     needRedraw = true;
@@ -462,12 +463,12 @@ var update = function(elapsed) {
 
 var hintImage = new Image();
 hintImage.onload = function() { needRedraw = true; }
-hintImage.src = "images/hint.png"
+hintImage.src = "images/hint_icon.png"
 var lockImage = new Image();
 lockImage.onload = function() { needRedraw = true; }
 lockImage.src = "images/lock.png"
 
-var draw = function() {
+function draw() {
     needRedraw = false;
 
     var oldW = canvas.width;
@@ -504,9 +505,10 @@ var draw = function() {
 
         ctx.drawImage(image, task.history.x-25, task.history.y-25, 50, 50);
 
-        if (task.history.mode=='locked' || task.history.mode=='completed') {
+        if (task.history.mode=='locked' || task.history.mode=='completed' || popupDiv.style.display!="none") {
             ctx.globalAlpha = 0.8
             ctx.beginPath();
+            ctx.fillStyle = "#222222";
             ctx.moveTo(task.history.x, task.history.y);
             ctx.lineTo(task.history.x, task.history.y + 25);
             ctx.arc(task.history.x, task.history.y, 25, -0.5*Math.PI, 2 * Math.PI - 0.5*Math.PI, true);
@@ -516,6 +518,7 @@ var draw = function() {
         }
 
         if (task.history.mode=='locked') {
+            ctx.fillStyle = "#222222";
             ctx.drawImage(lockImage, task.history.x, task.history.y, 25, 25);
             ctx.globalAlpha = 1
         }
@@ -523,13 +526,13 @@ var draw = function() {
         if (task.history.mode=='completed') {
             ctx.globalAlpha = 0.6
             ctx.beginPath();
+            ctx.fillStyle = "#222222";
             ctx.moveTo(task.history.x-5, task.history.y+10);
             ctx.lineTo(task.history.x+10, task.history.y+20);
             ctx.lineTo(task.history.x+20, task.history.y-5);
             ctx.lineWidth = 10;
             ctx.strokeStyle = '#00AA00';
             ctx.stroke();
-            ctx.fillStyle = "#222222";
             ctx.globalAlpha = 1
         }
 
@@ -538,6 +541,7 @@ var draw = function() {
 
             ctx.globalAlpha = 0.3
             ctx.beginPath();
+            ctx.fillStyle = "#AAAAAA";
             ctx.moveTo(task.history.x, task.history.y);
             ctx.lineTo(task.history.x, task.history.y + 25);
             ctx.arc(task.history.x, task.history.y, 25, -0.5*Math.PI, 2 * Math.PI * pctComplete - 0.5*Math.PI, true);
@@ -712,7 +716,7 @@ function hardReset() {
 function resetGame() {
     game = {alltasks:{},startage:18,maxage:35};
     game.milestones = {
-        firstDeath:"Well, congratulations, you died! Generally speaking in this game, death is progression. Now you get to live your life again, but you know so much more about the things you spent your last life working on. For instance, you won't need to spend four years farming a stone-filled field, you can dive straight into clearing our those stones! So many more years to spend on that stone-free farmland!",
+        firstDeath:"Well, congratulations, you died! Generally speaking in this game, death is progression. Now you get to live your life again, but you know so much more about the things you spent your last life working on. For instance, you won't need to spend four years farming a stone-filled field, you can dive straight into clearing out those pesky stones! So many more years to spend on that stone-free farmland!",
         firstImprovedRepeatable:"Okay, so, here's a quick overview of what we're calling groundhog bonuses. The highest level you've ever gotten a given task in a <b>previous life</b> improves your ability with the task. Sometimes, the tasks will take less time. Sometimes, they will produce more resources. Sometimes, they will cost fewer resources. Sometimes? All three! So, maybe it's a good time to learn how to farm that stone-free farm <b>really</b> well! You know. For future yous.",
         firstSkill:"You've learned a skill! Skills work slightly differently from our standard task groundhog progression. <br/>First, and most importantly, they impact <b>all</b> tasks that are related to the skill. The <i>farming</i> skill will improve every farming task you do. (That includes farms, moving stones, or even selling wheat! (I imagine it as, like, better looking wheat bundles thanks to your amazing tools, so they just fly off the shelves?)) <br/>Second, skills <b>only</b> increase the <b>resources produced</b> by the task.<br/>And third, the skills impact you in the same life you learn them, and you will start each life with 10% of the max-ever-skill. This is very different from task-specific groundhog bonuses! <br/>Last, if you get skills repeatedly (even from different sources/tasks), they will add up. Use that to your advantage!",
         firstTool:"Ooo, tools! Tools are, yet again, unique from skills and groundhog bonuses. <br/>First, tools, like skills, improve all tasks that are related to the tool - so farming tools improve all farming tasks. <br/>Second, and probably most important, tools have <b>no restart bonus</b> (you don't magically start a new life with tools just because you had them in a past life!) <br/>Third, tools <b>only</b> reduce the <b>time taken</b> to execute a task! A 1 acre farm will produce the same amount of wheat whether you're doing it by hand or with a scythe, but you will spend a lot less time with the tool. At least, that's the idea. Let's not be too nitpicky or pedantic here. <br/>Last, tools do not add up. Getting a dull scythe does not help you if you already have a sharp one, and having a dull scythe before you find a sharp one doesn't make the sharp one better! So, keep that in mind if you've got multiple options for tools!",
@@ -735,7 +739,7 @@ function resetGame() {
 
     registerTaskDefinition({
         taskid:"farm1",
-        imageUrl:'images/farm1.png',
+        imageUrl:'images/farm1_icon.png',
         repeatable:true,
         completionCosts:null,
         passiveGeneration:null,
@@ -746,14 +750,14 @@ function resetGame() {
         categories:{farming:1},
         unlock:null,
         name:"Unkept Farm",
-        predescription:"You woke up this morning, and had no real memories of your life before today. You...get the sense you are a farmer? And looking out the window, it looks like there's a farm there.",
-        completionstory:"Success! You got wheat! One whole wheat! What's wheat come in, anyway? Bushels? Pounds? Cartloads? These are the conversations I have with my friends now.",
+        predescription:"You woke up this morning, and had no real memories of your life before today. You...get the sense you are a farmer? And looking out the window, it looks like there's a farm there. So. There's that.",
+        completionstory:"Success! You got wheat! One whole wheat! What's wheat come in, anyway? Bushels? Pounds? Cartloads? These are the conversations I have with my friends now. I'm going with units. One unit of wheat. You're welcome.",
         description:"Work those fields some more.",
     });
 
     registerTaskDefinition({
         taskid:"removestone",
-        imageUrl:'images/stone.png',
+        imageUrl:'images/stone_icon.png',
         repeatable:false,
         completionCosts:null,
         passiveGeneration:null,
@@ -773,7 +777,7 @@ function resetGame() {
 
     registerTaskDefinition({
         taskid:"farm2",
-        imageUrl:'images/farm2.png',
+        imageUrl:'images/farm2_icon.png',
         repeatable:true,
         completionCosts:null,
         passiveGeneration:{wheat:0.5},
@@ -793,7 +797,7 @@ function resetGame() {
 
     registerTaskDefinition({
         taskid:"sellwheat",
-        imageUrl:'images/sell.png',
+        imageUrl:'images/sell_icon.png',
         repeatable:true,
         passiveGeneration:null,
         completionCosts:{wheat:25},
@@ -813,7 +817,7 @@ function resetGame() {
 
     registerTaskDefinition({
         taskid:"trainfarming",
-        imageUrl:'images/train.png',
+        imageUrl:'images/train_icon.png',
         repeatable:false,
         passiveGeneration:null,
         completionCosts:{gold:20},
@@ -833,7 +837,7 @@ function resetGame() {
 
     registerTaskDefinition({
         taskid:"farmingtools",
-        imageUrl:'images/tools.png',
+        imageUrl:'images/tools_icon.png',
         repeatable:false,
         passiveGeneration:null,
         completionCosts:{gold:5},
@@ -853,7 +857,7 @@ function resetGame() {
 
     registerTaskDefinition({
         taskid:"hirehelp",
-        imageUrl:'images/hire.png',
+        imageUrl:'images/hire_icon.png',
         repeatable:false,
         passiveGeneration:{gold:25},
         completionCosts:{gold:50},
@@ -865,7 +869,7 @@ function resetGame() {
         unlock:{resourceName:"gold", amount:300, permanent:true},
         parenttask:{taskid:"farmingtools"},
         parentoffset:{x:-60,y:60},
-        hint:"Okay, with those tools, I bet you could get even better at farming, and even better at selling, and then...man, I bet you could make... dozens of gold! No, no. Hundreds! No, no. THREE hundred! (Also, until I put in milestone popups: Tools make associated tasks complete faster, so you can get more done in your life!)",
+        hint:"Okay, with those tools, I bet you could get even better at farming, and even better at selling, and then...man, I bet you could make... dozens of gold! No, no. Hundreds! No, no. THREE hundred!",
         name:"Hire Workers",
         predescription:"You've made quite a name for yourself, and become wealthy enough that when you visit town, many strangers approach you and ask if you need any help on the farm. You'd have to build a dormitory to house them, but it'd probably pay off in a few years?",
         completionstory:"You agree to take them on, you buy the materials and head back to the farm along with some of the hired hands to build a place for your workers to live. Once it's complete, they move in and get to work extending, cleaning and working the farm, and running regular trips to the city!",
@@ -874,7 +878,7 @@ function resetGame() {
 
     registerTaskDefinition({
         taskid:"farmerapprentice",
-        imageUrl:'images/teach.png',
+        imageUrl:'images/teach_icon.png',
         repeatable:false,
         passiveGeneration:{wheat:15},
         completionCosts:null,
@@ -894,7 +898,7 @@ function resetGame() {
 
     registerTaskDefinition({
         taskid:"farmerretire",
-        imageUrl:'images/retire.png',
+        imageUrl:'images/retire_icon.png',
         repeatable:false,
         passiveGeneration:null,
         completionCosts:{gold:1000},
@@ -913,7 +917,7 @@ function resetGame() {
 
     registerTaskDefinition({
         taskid:"inheritance",
-        imageUrl:'images/inheritance.png',
+        imageUrl:'images/cheivo_icon.png',
         achievement:true,
         repeatable:false,
         passiveGeneration:null,
@@ -933,8 +937,8 @@ function resetGame() {
     });
 
     registerTaskDefinition({
-        taskid:"squirestart",
-        imageUrl:'images/squire.png',
+        taskid:"squire",
+        imageUrl:'images/squire_icon.png',
         repeatable:false,
         passiveGeneration:null,
         completionCosts:{gold:100},
@@ -953,8 +957,8 @@ function resetGame() {
         description:"Drudge away future Ser!",
     });
     registerTaskDefinition({
-        taskid:"swordsstart",
-        imageUrl:'images/swords.png',
+        taskid:"swords",
+        imageUrl:'images/swords_icon.png',
         repeatable:false,
         passiveGeneration:null,
         completionCosts:null,
@@ -963,8 +967,8 @@ function resetGame() {
         completionTools:null,
         completionYears:5,
         categories:null,
-        unlock:{taskid:"squirestart", level:1, permanent:true},
-        parenttask:{taskid:"squirestart"},
+        unlock:{taskid:"squire", level:1, permanent:true},
+        parenttask:{taskid:"squire"},
         parentoffset:{x:-60,y:60},
         name:"Swords",
         hint:"Once you are a Squire...",
@@ -973,18 +977,18 @@ function resetGame() {
         description:"You focus your time on different types of blades, begin to understand the training path ahead of you.",
     });
     registerTaskDefinition({
-        taskid:"etiquettestart",
-        imageUrl:'images/etiquette.png',
+        taskid:"etiquette",
+        imageUrl:'images/etiquette_icon.png',
         repeatable:false,
         passiveGeneration:null,
-        completionCosts:{skill:100, finesse:100},
+        completionCosts:{skill:100, horses:100},
         completionGeneration:null,
         completionLearn:null,
         completionTools:null,
         completionYears:5,
         categories:null,
-        unlock:{completedtasksand:["skillstart","finessestart"]},
-        parenttask:{taskid:"squirestart"},
+        unlock:{completedtasksand:["skill","horses"]},
+        parenttask:{taskid:"squire"},
         parentoffset:{x:0,y:60},
         name:"Etiquette",
         hint:"Once you are a Squire...",
@@ -993,8 +997,8 @@ function resetGame() {
         description:"You focus your time on comprehending the rules behind these silly approaches to life those in the court uphold.",
     });
     registerTaskDefinition({
-        taskid:"drudgerystart",
-        imageUrl:'images/drudgery.png',
+        taskid:"drudgery",
+        imageUrl:'images/drudgery_icon.png',
         repeatable:false,
         passiveGeneration:null,
         completionCosts:null,
@@ -1003,8 +1007,8 @@ function resetGame() {
         completionTools:null,
         completionYears:5,
         categories:null,
-        unlock:{taskid:"squirestart", level:1, permanent:true},
-        parenttask:{taskid:"squirestart"},
+        unlock:{taskid:"squire", level:1, permanent:true},
+        parenttask:{taskid:"squire"},
         parentoffset:{x:60,y:60},
         name:"Drudgery",
         hint:"Once you are a Squire...",
@@ -1013,8 +1017,8 @@ function resetGame() {
         description:"You focus your time on chasing the never ending tasks set you by your Knight.",
     });
     registerTaskDefinition({
-        taskid:"strengthstart",
-        imageUrl:'images/strength.png',
+        taskid:"strength",
+        imageUrl:'images/strength_icon.png',
         repeatable:true,
         passiveGeneration:null,
         completionCosts:null,
@@ -1023,8 +1027,8 @@ function resetGame() {
         completionTools:null,
         completionYears:0.5,
         categories:{swords:1},
-        unlock:{taskid:"swordsstart", level:1, permanent:true},
-        parenttask:{taskid:"swordsstart"},
+        unlock:{taskid:"swords", level:1, permanent:true},
+        parenttask:{taskid:"swords"},
         parentoffset:{x:0,y:60},
         name:"Strength",
         hint:"Slice and Dice...",
@@ -1033,8 +1037,8 @@ function resetGame() {
         description:"Picking things up and putting them down, ie the old fashioned way to get stronger.",
     });
     registerTaskDefinition({
-        taskid:"rulesstart",
-        imageUrl:'images/rules.png',
+        taskid:"rules",
+        imageUrl:'images/rules_icon.png',
         repeatable:true,
         passiveGeneration:null,
         completionCosts:null,
@@ -1043,8 +1047,8 @@ function resetGame() {
         completionTools:null,
         completionYears:0.5,
         categories:null,
-        unlock:{taskid:"etiquettestart", level:1, permanent:true},
-        parenttask:{taskid:"etiquettestart"},
+        unlock:{taskid:"etiquette", level:1, permanent:true},
+        parenttask:{taskid:"etiquette"},
         parentoffset:{x:0,y:60},
         name:"Rules",
         hint:"Requires being fancy...",
@@ -1053,8 +1057,8 @@ function resetGame() {
         description:"One fork placement and silly bow at a time you will learn to navigate the courts like a Earl.",
     });
     registerTaskDefinition({
-        taskid:"armorstart",
-        imageUrl:'images/armor.png',
+        taskid:"armor",
+        imageUrl:'images/armor_icon.png',
         repeatable:true,
         passiveGeneration:null,
         completionCosts:null,
@@ -1063,8 +1067,8 @@ function resetGame() {
         completionTools:null,
         completionYears:0.5,
         categories:{drudgery:1},
-        unlock:{taskid:"drudgerystart", level:1, permanent:true},
-        parenttask:{taskid:"drudgerystart"},
+        unlock:{taskid:"drudgery", level:1, permanent:true},
+        parenttask:{taskid:"drudgery"},
         parentoffset:{x:0,y:60},
         name:"Armor",
         hint:"What a chore...",
@@ -1073,8 +1077,8 @@ function resetGame() {
         description:"Only by taking it apart and cleaning it will you know how it really works.",
     });
     registerTaskDefinition({
-        taskid:"skillstart",
-        imageUrl:'images/skill.png',
+        taskid:"skill",
+        imageUrl:'images/skill_icon.png',
         repeatable:true,
         passiveGeneration:null,
         completionCosts:null,
@@ -1083,8 +1087,8 @@ function resetGame() {
         completionTools:null,
         completionYears:0.5,
         categories:{swords:1},
-        unlock:{taskid:"strengthstart", level:1, permanent:true},
-        parenttask:{taskid:"strengthstart"},
+        unlock:{taskid:"strength", level:1, permanent:true},
+        parenttask:{taskid:"strength"},
         parentoffset:{x:0,y:60},
         name:"Skill",
         hint:"Strength is not enough...",
@@ -1093,8 +1097,8 @@ function resetGame() {
         description:"You focus your time on moving through the forms.",
     });
     registerTaskDefinition({
-        taskid:"finessestart",
-        imageUrl:'images/finesse.png',
+        taskid:"finesse",
+        imageUrl:'images/finesse_icon.png',
         repeatable:true,
         passiveGeneration:null,
         completionCosts:{skill:50},
@@ -1103,8 +1107,8 @@ function resetGame() {
         completionTools:null,
         completionYears:0.5,
         categories:{etiquette:1},
-        unlock:{taskid:"rulesstart", level:1, permanent:true},
-        parenttask:{taskid:"rulesstart"},
+        unlock:{taskid:"rules", level:1, permanent:true},
+        parenttask:{taskid:"rules"},
         parentoffset:{x:0,y:60},
         name:"Finesse",
         hint:"Do you know the rules?",
@@ -1113,8 +1117,8 @@ function resetGame() {
         description:"Once you put the ee in \"finesse\" you will surely win the approval of your knight.",
     });
     registerTaskDefinition({
-        taskid:"horsesstart",
-        imageUrl:'images/horses.png',
+        taskid:"horses",
+        imageUrl:'images/horses_icon.png',
         repeatable:true,
         passiveGeneration:null,
         completionCosts:{skill:50, armor:50},
@@ -1123,8 +1127,8 @@ function resetGame() {
         completionTools:null,
         completionYears:0.5,
         categories:{drudgery:1},
-        unlock:{completedtasksand:["strengthstart","armorstart"]},
-        parenttask:{taskid:"armorstart"},
+        unlock:{completedtasksand:["strength","armor"]},
+        parenttask:{taskid:"armor"},
         parentoffset:{x:0,y:60},
         name:"Horses",
         hint:"This needs two...",
@@ -1134,7 +1138,7 @@ function resetGame() {
     });
     registerTaskDefinition({
         taskid:"knight",
-        imageUrl:'images/knight.png',
+        imageUrl:'images/knight_icon.png',
         repeatable:false,
         passiveGeneration:null,
         completionCosts:{strength:1000, skill:1000, rules:1000, finesse:1000, armor:1000, horses:1000},
@@ -1143,8 +1147,8 @@ function resetGame() {
         completionTools:null,
         completionYears:0.5,
         categories:null,
-        unlock:{completedtasksand:["skillstart","finessestart","horsesstart"]},
-        parenttask:{taskid:"rulesstart"},
+        unlock:{completedtasksand:["skill","finesse","horses"]},
+        parenttask:{taskid:"finesse"},
         parentoffset:{x:0,y:60},
         name:"Knighthood!",
         hint:"All together now...",
@@ -1193,7 +1197,8 @@ function startGame() {
     resetGame();
 
     // the rest of this is UI hooks...
-    popup.addEventListener('click', closePopup, false);
+//    popup.addEventListener('click', closePopup, false);
+    popup_x.addEventListener('click', closePopup, false);
 
     canvas.addEventListener('click', handleMouseClick, false);
     canvas.addEventListener('mousemove', handleMouseMove, false);
@@ -1226,6 +1231,7 @@ var mouseIsDown = false, dragged = false;
 var hoveredOverTask = null;
 
 var handleMouseClick = function(e) {
+    if (popupDiv.style.display!="none") { hideToolTip(); mouseIsDown = false; dragged = false; hoveredOverTask = null; lastX = null; lastY = null; return; }
     if (dragged) return; // i tried putting this handle click logic in "mouseup" but it missed a lot of stuff i considered a click for some reason?
 
     var clickedTask = findClosestTask(e)
@@ -1237,6 +1243,7 @@ var handleMouseClick = function(e) {
 }
 
 var handleMouseDown = function(evt) {
+    if (popupDiv.style.display!="none") { hideToolTip(); mouseIsDown = false; dragged = false; hoveredOverTask = null; lastX = null; lastY = null; return; }
     document.body.style.mozUserSelect = document.body.style.webkitUserSelect = document.body.style.userSelect = 'none';
     lastX = event.clientX;
     lastY = event.clientY
@@ -1245,6 +1252,7 @@ var handleMouseDown = function(evt) {
 }
 
 function handleMouseMove(e) {
+    if (popupDiv.style.display!="none") { hideToolTip(); mouseIsDown = false; dragged = false; hoveredOverTask = null; lastX = null; lastY = null; return; }
     var previousX = lastX;
     var previousY = lastY;
     lastX = event.clientX;
@@ -1278,6 +1286,7 @@ function handleMouseMove(e) {
 }
 
 var handleMouseOut = function(e) {
+    if (popupDiv.style.display!="none") { hideToolTip(); mouseIsDown = false; dragged = false; hoveredOverTask = null; lastX = null; lastY = null; return; }
     if (dragged) save();
 
     mouseIsDown = false;
@@ -1286,6 +1295,7 @@ var handleMouseOut = function(e) {
 }
 
 var handleMouseUp = function(e) {
+    if (popupDiv.style.display!="none") { hideToolTip(); mouseIsDown = false; dragged = false; hoveredOverTask = null; lastX = null; lastY = null; return; }
     if (dragged) save();
 
     mouseIsDown = false;
