@@ -206,15 +206,10 @@ var completeTask = function(task) {
     checkVisibleTasks();
 }
 
-var doTask = function(task) {
-    if (task === null) return;
-    if (player.activetaskid !== null) return;
-    if (!task.def.repeatable && task.level > 0) return;
-
-    if (!player.milestones.firstImprovedRepeatable && task.def.repeatable && (task.history.maxlevel > 0)) {
-        sendMessage(game.milestones.firstImprovedRepeatable, true);
-        player.milestones.firstImprovedRepeatable = 1;
-    }
+function _canDoTask(task) {
+    if (task === null) return false;
+    if (player.activetaskid !== null) return false;
+    if (!task.def.repeatable && task.level > 0) return false;
 
     if (task.def.completionCosts) {
         var missingResources = false;
@@ -227,16 +222,28 @@ var doTask = function(task) {
         });
         if (missingResources) {
             sendMessage("Not enough resources!", false);
-            return;
-        } else {
-            Object.entries(task.def.completionCosts).forEach((e)=> {
-                resource = e[0];
-                amount = computeCompletionCost(task,e[1]);
-                player.resources[resource] -= amount;
-            });
+            return false;
         }
     }
-    // if we can't do this task for some other reason, return? Not visible (cheaters!)? Not enough money? (need a UI indicator for that when i wrote this...)
+
+    return true;
+}
+
+var doTask = function(task) {
+    if (!_canDoTask(task)) return;
+
+    if (!player.milestones.firstImprovedRepeatable && task.def.repeatable && (task.history.maxlevel > 0)) {
+        sendMessage(game.milestones.firstImprovedRepeatable, true);
+        player.milestones.firstImprovedRepeatable = 1;
+    }
+
+    if (task.def.completionCosts) {
+        Object.entries(task.def.completionCosts).forEach((e)=> {
+            resource = e[0];
+            amount = computeCompletionCost(task,e[1]);
+            player.resources[resource] -= amount;
+        });
+    }
 
     player.activetaskid = task.def.taskid;
     task.life.yearsWorked = 0;
@@ -468,6 +475,12 @@ var lockImage = new Image();
 lockImage.onload = function() { needRedraw = true; }
 lockImage.src = "images/lock.png"
 
+var storylineColors = {
+  farmer:{border:"Sienna", availableBackground:"SandyBrown", unavailableBackground:"SaddleBrown", textColor:"Black"},
+  squire:{border:"SteelBlue", availableBackground:"SkyBlue", unavailableBackground:"SlateBlue", textColor:"Black"},
+  dev:{border:"Red", availableBackground:"Red", unavailableBackground:"Red", textColor:"Black"},
+}
+
 function draw() {
     needRedraw = false;
 
@@ -549,6 +562,58 @@ function draw() {
             ctx.fill();
             ctx.globalAlpha = 1
         }
+
+        var taskIsAvailable = _canDoTask(task);
+        if (task.history.mode=='locked' || task.history.mode=='completed' || task.history.mode=='hintmode') taskIsAvailable = false;
+        var textHeight = 8
+        var halfHeight = textHeight / 2
+        if (task.history.mode!='hintmode') {
+            ctx.beginPath();
+            ctx.fillStyle = storylineColors[task.def.storyline][(taskIsAvailable ? "availableBackground" : "unavailableBackground")]; // or unavailableBackground
+            ctx.moveTo(task.history.x - 25 + halfHeight, task.history.y - 24 - textHeight);
+            ctx.lineTo(task.history.x + 25 - halfHeight, task.history.y - 24 - textHeight);
+            ctx.arc(task.history.x + 25 - halfHeight, task.history.y - 24 - halfHeight, halfHeight, 1.5*Math.PI, 0.5*Math.PI, false);
+            ctx.lineTo(task.history.x - 25 + halfHeight, task.history.y - 24);
+            ctx.arc(task.history.x - 25 + halfHeight, task.history.y - 24 - halfHeight, halfHeight, 1.5*Math.PI, 0.5*Math.PI, true);
+            ctx.fill();
+
+            ctx.font = textHeight + "px Open Sans MS";
+            ctx.fillStyle = storylineColors[task.def.storyline].textColor;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "alphabetic";
+            var displayName = task.def.name;
+            while (ctx.measureText(displayName).width > 45) {displayName = displayName.substring(displayName, displayName.length-4)+"..."}
+            ctx.fillText(displayName, task.history.x, task.history.y-25);
+        }
+
+        if (task.history && task.history.maxlevel && task.history.maxlevel > 0) {
+            // historic number in bottom right corner
+            ctx.beginPath();
+            ctx.fillStyle = storylineColors[task.def.storyline][(taskIsAvailable ? "availableBackground" : "unavailableBackground")]; // or unavailableBackground
+            ctx.moveTo(task.history.x + 25 - textHeight, task.history.y + 25);
+            ctx.ellipse(task.history.x + 25 - halfHeight, task.history.y + 25 - textHeight, halfHeight*2, halfHeight*1.1, 0, 0, 2 * Math.PI, true);
+            ctx.fill();
+
+            ctx.font = textHeight + "px Open Sans MS";
+            ctx.fillStyle = storylineColors[task.def.storyline].textColor;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(task.history.maxlevel, task.history.x + 25 - halfHeight, task.history.y + 25 - textHeight+1);
+        }
+        if (task.life && task.life.level && task.life.level > 0 || task.history && task.history.maxlevel && task.history.maxlevel > 0) {
+            ctx.beginPath();
+            ctx.fillStyle = storylineColors[task.def.storyline][(taskIsAvailable ? "availableBackground" : "unavailableBackground")]; // or unavailableBackground
+            ctx.moveTo(task.history.x + 25 - textHeight, task.history.y - 25);
+            ctx.ellipse(task.history.x + 25 - halfHeight, task.history.y - 25 + textHeight, halfHeight*2, halfHeight*1.1, 0, 0, 2 * Math.PI, true);
+            ctx.fill();
+
+            ctx.font = textHeight + "px Open Sans MS";
+            ctx.fillStyle = storylineColors[task.def.storyline].textColor;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.fillText(task.life.level, task.history.x + 25 - halfHeight, task.history.y - 25 + textHeight+1);
+        }
+
     })
 //    ctx.restore();
 }
@@ -738,6 +803,7 @@ function resetGame() {
     }
 
     registerTaskDefinition({
+        storyline:"farmer",
         taskid:"farm1",
         imageUrl:'images/farm1_icon.png',
         repeatable:true,
@@ -749,13 +815,14 @@ function resetGame() {
         completionYears:1,
         categories:{farming:1},
         unlock:null,
-        name:"Unkept Farm",
+        name:"Wheat",
         predescription:"You woke up this morning, and had no real memories of your life before today. You...get the sense you are a farmer? And looking out the window, it looks like there's a farm there. So. There's that.",
         completionstory:"Success! You got wheat! One whole wheat! What's wheat come in, anyway? Bushels? Pounds? Cartloads? These are the conversations I have with my friends now. I'm going with units. One unit of wheat. You're welcome.",
         description:"Work those fields some more.",
     });
 
     registerTaskDefinition({
+        storyline:"farmer",
         taskid:"removestone",
         imageUrl:'images/stone_icon.png',
         repeatable:false,
@@ -769,13 +836,14 @@ function resetGame() {
         unlock:{taskid: "farm1", level:4, permanent:true},
         parenttask:{taskid:"farm1"},
         hint:"Perhaps some experience farming would lead to some insight?",
-        name:"Remove Stones",
+        name:"Clear Rocks",
         predescription:"Now that you've got some experience farming, you realize rocks kinda get in the way. Like. Really in the way. You're thinking maybe you should remove them. It'll be a lot of work, but you're pretty sure it'll pay off.",
         completionstory:"Wow, that was rough. There was this one boulder you had to dig around, took over a month and your hands were super rough. Then you had to break it up to move it in pieces. But now you have this really nice looking field. And, like. A big pile of rocks. So, that's cool.",
         description:"Not this time, little rocks. We know your game. Now, git!",
     });
 
     registerTaskDefinition({
+        storyline:"farmer",
         taskid:"farm2",
         imageUrl:'images/farm2_icon.png',
         repeatable:true,
@@ -789,13 +857,14 @@ function resetGame() {
         unlock:{taskid:"removestone", level:1, permanent:false},
         parenttask:{taskid:"removestone"},
         hint:"Just gotta get rid of those stones...",
-        name:"Actual Farm",
+        name:"More Wheat",
         predescription:"Well, I'll be gosh darned if this isn't the prettiest farm you've ever seen. Planting lines as straight as an arrow. No huge boulders in the way. Not at all half rocks instead of plants. Really, quite a sight to see. I bet this'd look real cool to a bird. Yeah, there's probably one bird up in that flock of birds overhead is all like 'wow i see a cool pattern down there guys, do you see that pattern? hey guys it's a pattern, look down, it's so cool!'",
         completionstory:"Well, not only did this generate significantly more wheat (like, literally twice as much wheat!) than your previous farm did, now that you've set it up and harvested once, it seems to just keep making wheat! Like, even more than last year, and even when you're not paying attention to it! So cool. I'm really glad you removed those rocks. Really smart idea. You should be a tactician, I think you'd be great at it. (That's definitely not foreshadowing, nope, absolutely not, no way.)",
         description:"Such farming. So wheat.",
     });
 
     registerTaskDefinition({
+        storyline:"farmer",
         taskid:"sellwheat",
         imageUrl:'images/sell_icon.png',
         repeatable:true,
@@ -816,6 +885,7 @@ function resetGame() {
     });
 
     registerTaskDefinition({
+        storyline:"farmer",
         taskid:"trainfarming",
         imageUrl:'images/train_icon.png',
         repeatable:false,
@@ -829,13 +899,14 @@ function resetGame() {
         unlock:{resourceName:"gold", amount:1, permanent:true},
 //        parenttask:{taskid:"sellwheat"},
         hint:"Wonder what you'd do with some money?",
-        name:"Study Under Master Farmer",
+        name:"Master",
         predescription:"While you were in the city selling your wheat, you saw an ad for a master farmer who would train up and coming farmers! It would be great to actually know how to farm instead of just kinda doing whatever? (HINT: This one's a tough one, you'll have to get really good at selling, and to do that you'd have to get really good at farming so you can spend as much time as possible selling...)",
         completionstory:"That master farmer really knew their stuff. You totally learned a lot of really cool things!",
         description:"Freshen up that farmin' skill.",
     });
 
     registerTaskDefinition({
+        storyline:"farmer",
         taskid:"farmingtools",
         imageUrl:'images/tools_icon.png',
         repeatable:false,
@@ -849,13 +920,14 @@ function resetGame() {
         unlock:{taskid:"trainfarming", level:1, permanent:true},
         parenttask:{taskid:"trainfarming"},
         hint:"I wonder what a lifetime of training under the master would be like?",
-        name:"Buy Farming Tools",
+        name:"Buy Tools",
         predescription:"While the general education was great, the most valuable thing your teacher taught you was the password to the underground farming tools market. 'wheat' .......... yeah, I thought so too.",
         completionstory:"You utter that sweet, sweet phrase.... 'wheat'.... and the door swings open to a bustling panoply of carts and vendors showing off the latest and greatest in farming technology. There's a scythe store, a gloves store, some well-bred wheat seed stores... everything a farmer in whatever medieval century this is could ask for. You buy some fine tools and head back home. (next step hint: time to make some real money! ... this will go into another place in the UI once I write it but for now... :D)",
         description:"Grab those tools.",
     });
 
     registerTaskDefinition({
+        storyline:"farmer",
         taskid:"hirehelp",
         imageUrl:'images/hire_icon.png',
         repeatable:false,
@@ -877,6 +949,7 @@ function resetGame() {
     });
 
     registerTaskDefinition({
+        storyline:"farmer",
         taskid:"farmerapprentice",
         imageUrl:'images/teach_icon.png',
         repeatable:false,
@@ -890,13 +963,14 @@ function resetGame() {
         unlock:{taskid:"hirehelp", historiclevel:2, permanent:true},
         parenttask:{taskid:"hirehelp"},
         hint:"A couple lifetimes of working with hired help might lead you to a new idea?",
-        name:"Adopt Apprentice",
+        name:"Apprentice",
         predescription:"You recall a neighboring peasant mentioning to you, as your workers tilled the fields in a previous life, that they'd wished you'd had the farm when their son was younger, as he'd always wanted to be an apprentice farmer... They even said they'd have paid you to take him! Well, now you know, and he's a young boy again, sooooo....",
         completionstory:"You bring on the boy, it takes time to train him, but he is an absolute joy. Hard working, productive, eager, and absolutely brilliant. With his help, you may finally have time to pursue other interests in life...",
         description:"Visit the Neighbors.",
     });
 
     registerTaskDefinition({
+        storyline:"farmer",
         taskid:"farmerretire",
         imageUrl:'images/retire_icon.png',
         repeatable:false,
@@ -909,13 +983,14 @@ function resetGame() {
         unlock:{taskid:"farmerapprentice", historiclevel:1, permanent:true},
         parenttask:{taskid:"farmerapprentice"},
         hint:"Just, like. Do the new thing?",
-        name:"Sweet Retirement",
+        name:"Retirement",
         predescription:"Well, you did so well with that apprentice that you think, maybe, with some more practice, you could probably make enough to actually retire. Like, for realsies retire and just kinda chill out a bit. Sit in a chair for the first time in your life. Maybe learn to read. Who knows. Let's build up that nest-egg and see where life takes us.",
         completionstory:"Ahh, sweet relief. Just kickin' back and relaxin'. Turns out you saved too much, and you bet you could hand something down as an inheritance. And literally the moment you think of it, you feel something weird deep down in whatever it is that's making you live this life over and over... Wonder what it is. Maybe you won, maybe you're free!",
         description:"You can retire again. Won't change anything, but it's a nice idea.",
     });
 
     registerTaskDefinition({
+        storyline:"farmer",
         taskid:"inheritance",
         imageUrl:'images/cheivo_icon.png',
         achievement:true,
@@ -930,15 +1005,16 @@ function resetGame() {
         unlock:{taskid:"farmerretire", level:1, permanent:true},
         parenttask:{taskid:"farmerretire"},
         hint:"Win farming! Do it! I believe in you!",
-        name:"ACHIEVEMENT: Inheritance!",
-        predescription:"While it makes no sense, having made it to retirement appears to have changed the timeline, and your future lives will all start with 250 gold! Thanks, past-me. Or, future-me? Or... uh...",
+        name:"Inheritance!",
+        predescription:"ACHIEVEMENT! While it makes no sense, having made it to retirement appears to have changed the timeline, and your future lives will all start with 250 gold! Thanks, past-me. Or, future-me? Or... uh...",
         completionstory:"ACHIEVEMENT UNLOCKED: Inheritance!",
         description:"You've already completed this achievement, you should never see this. If you do, please report it to the devs.",
     });
 
     registerTaskDefinition({
+        storyline:"squire",
         taskid:"squire",
-        imageUrl:'images/squire_icon.png',
+        imageUrl:'images/squire2_icon.png',
         repeatable:false,
         passiveGeneration:null,
         completionCosts:{gold:100},
@@ -957,6 +1033,7 @@ function resetGame() {
         description:"Drudge away future Ser!",
     });
     registerTaskDefinition({
+        storyline:"squire",
         taskid:"swords",
         imageUrl:'images/swords_icon.png',
         repeatable:false,
@@ -977,6 +1054,7 @@ function resetGame() {
         description:"You focus your time on different types of blades, begin to understand the training path ahead of you.",
     });
     registerTaskDefinition({
+        storyline:"squire",
         taskid:"etiquette",
         imageUrl:'images/etiquette_icon.png',
         repeatable:false,
@@ -997,6 +1075,7 @@ function resetGame() {
         description:"You focus your time on comprehending the rules behind these silly approaches to life those in the court uphold.",
     });
     registerTaskDefinition({
+        storyline:"squire",
         taskid:"drudgery",
         imageUrl:'images/drudgery_icon.png',
         repeatable:false,
@@ -1017,6 +1096,7 @@ function resetGame() {
         description:"You focus your time on chasing the never ending tasks set you by your Knight.",
     });
     registerTaskDefinition({
+        storyline:"squire",
         taskid:"strength",
         imageUrl:'images/strength_icon.png',
         repeatable:true,
@@ -1037,6 +1117,7 @@ function resetGame() {
         description:"Picking things up and putting them down, ie the old fashioned way to get stronger.",
     });
     registerTaskDefinition({
+        storyline:"squire",
         taskid:"rules",
         imageUrl:'images/rules_icon.png',
         repeatable:true,
@@ -1057,6 +1138,7 @@ function resetGame() {
         description:"One fork placement and silly bow at a time you will learn to navigate the courts like a Earl.",
     });
     registerTaskDefinition({
+        storyline:"squire",
         taskid:"armor",
         imageUrl:'images/armor_icon.png',
         repeatable:true,
@@ -1077,6 +1159,7 @@ function resetGame() {
         description:"Only by taking it apart and cleaning it will you know how it really works.",
     });
     registerTaskDefinition({
+        storyline:"squire",
         taskid:"skill",
         imageUrl:'images/skill_icon.png',
         repeatable:true,
@@ -1097,6 +1180,7 @@ function resetGame() {
         description:"You focus your time on moving through the forms.",
     });
     registerTaskDefinition({
+        storyline:"squire",
         taskid:"finesse",
         imageUrl:'images/finesse_icon.png',
         repeatable:true,
@@ -1110,13 +1194,14 @@ function resetGame() {
         unlock:{taskid:"rules", level:1, permanent:true},
         parenttask:{taskid:"rules"},
         parentoffset:{x:0,y:60},
-        name:"Finesse",
+        name:"Society",
         hint:"Do you know the rules?",
         predescription:"A knight must understand how to navigate the delicate social web of nobility.",
         completionstory:"You thought etiquette was hard to spell and here we go with finesse...",
         description:"Once you put the ee in \"finesse\" you will surely win the approval of your knight.",
     });
     registerTaskDefinition({
+        storyline:"squire",
         taskid:"horses",
         imageUrl:'images/horses_icon.png',
         repeatable:true,
@@ -1137,6 +1222,7 @@ function resetGame() {
         description:"The proper care and handling of a horse will make or break a Squire.",
     });
     registerTaskDefinition({
+        storyline:"squire",
         taskid:"knight",
         imageUrl:'images/knight_icon.png',
         repeatable:false,
@@ -1170,6 +1256,7 @@ function resetGame() {
 
     if (false) {
         registerTaskDefinition({
+            storyline:"dev",
             taskid:"dev",
             imageUrl:'images/dev.png',
             repeatable:true,
