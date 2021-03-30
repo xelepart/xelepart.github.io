@@ -105,11 +105,16 @@ var checkVisibleTasks = function() {
             var freebie = task.def.unlock === null;
             var active = task.life.level > 0;
 
-            var taskLevelPrereqMet = task.def.unlock !== null && (task.def.unlock.taskid && task.def.unlock.level && game.alltasks[task.def.unlock.taskid].life.level >= task.def.unlock.level);
-            var resourcePrereqMet = task.def.unlock !== null && (task.def.unlock.resourceName && player.resources[task.def.unlock.resourceName] >= task.def.unlock.amount);
-            var historicTaskLevelPrereqMet = task.def.unlock !== null && (task.def.unlock.taskid && task.def.unlock.historiclevel && game.alltasks[task.def.unlock.taskid].history.maxlevel >= task.def.unlock.historiclevel);
-            var parentTasksAndUnlock = task.def.unlock !== null && (task.def.unlock.completedtasksand && task.def.unlock.completedtasksand.map((taskid) => game.alltasks[taskid].history.maxlevel > 0 || game.alltasks[taskid].life.level > 0).reduce((r,c)=>r&&c, true));
-            var prereqMet = taskLevelPrereqMet || resourcePrereqMet || historicTaskLevelPrereqMet || parentTasksAndUnlock;
+            var prereqMet = false;
+            if (task.def.unlock && task.def.unlock.func) {
+              prereqMet = task.def.unlock.func();
+            } else {
+              var taskLevelPrereqMet = task.def.unlock !== null && (task.def.unlock.taskid && task.def.unlock.level && game.alltasks[task.def.unlock.taskid].life.level >= task.def.unlock.level);
+              var resourcePrereqMet = task.def.unlock !== null && (task.def.unlock.resourceName && player.resources[task.def.unlock.resourceName] >= task.def.unlock.amount);
+              var historicTaskLevelPrereqMet = task.def.unlock !== null && (task.def.unlock.taskid && task.def.unlock.historiclevel && game.alltasks[task.def.unlock.taskid].history.maxlevel >= task.def.unlock.historiclevel);
+              var parentTasksAndUnlock = task.def.unlock !== null && (task.def.unlock.completedtasksand && task.def.unlock.completedtasksand.map((taskid) => game.alltasks[taskid].history.maxlevel > 0 || game.alltasks[taskid].life.level > 0).reduce((r,c)=>r&&c, true));
+              prereqMet = taskLevelPrereqMet || resourcePrereqMet || historicTaskLevelPrereqMet || parentTasksAndUnlock;
+            }
 
             var permanentPreviousLive = (task.def.unlock !== null) && task.def.unlock.permanent && task.history.everlive;
 
@@ -117,7 +122,7 @@ var checkVisibleTasks = function() {
 
             var parenttaskHint = task.def.parenttask && game.alltasks[task.def.parenttask.taskid].history.seen && !(game.alltasks[task.def.parenttask.taskid].history.mode=='hintmode');
             var parenttasksorHint = task.def.parenttasksor && task.def.parenttasksor.map((taskid) => game.alltasks[taskid].history.seen && !(game.alltasks[taskid].history.mode=='hintmode')).reduce((r,c)=>r||c, false);
-            var hintmode = parenttaskHint || parenttasksorHint;
+            var hintmode = !task.def.nohint && (parenttaskHint || parenttasksorHint);
             var previouslyDone = task.history.maxlevel > 0;
 
             if (actuallyVisible || hintmode || previouslyDone) {
@@ -206,7 +211,7 @@ var completeTask = function(task) {
     checkVisibleTasks();
 }
 
-function _canDoTask(task) {
+function _canDoTask(task, sendmsg = false) {
     if (task === null) return false;
     if (player.activetaskid !== null) return false;
     if (!task.def.repeatable && task.level > 0) return false;
@@ -221,7 +226,7 @@ function _canDoTask(task) {
             }
         });
         if (missingResources) {
-            sendMessage("Not enough resources!", false);
+            if (sendmsg) sendMessage("Not enough resources!", false);
             return false;
         }
     }
@@ -230,7 +235,7 @@ function _canDoTask(task) {
 }
 
 var doTask = function(task) {
-    if (!_canDoTask(task)) return;
+    if (!_canDoTask(task, true)) return;
 
     if (!player.milestones.firstImprovedRepeatable && task.def.repeatable && (task.history.maxlevel > 0)) {
         sendMessage(game.milestones.firstImprovedRepeatable, true);
@@ -1008,6 +1013,52 @@ function resetGame() {
         name:"Inheritance!",
         predescription:"ACHIEVEMENT! While it makes no sense, having made it to retirement appears to have changed the timeline, and your future lives will all start with 250 gold! Thanks, past-me. Or, future-me? Or... uh...",
         completionstory:"ACHIEVEMENT UNLOCKED: Inheritance!",
+        description:"You've already completed this achievement, you should never see this. If you do, please report it to the devs.",
+    });
+
+    registerTaskDefinition({
+        storyline:"farmer",
+        taskid:"nostone",
+        imageUrl:'images/cheivo_icon.png',
+        achievement:true,
+        repeatable:false,
+        passiveGeneration:null,
+        completionCosts:null,
+        completionGeneration:null,
+        completionLearn:null,
+        completionTools:null,
+        completionYears:null,
+        newlifeResources:{wheat:50},
+        unlock:{permanent:true, func:function() { return player.tasks["farm1"].life.level > 10 && player.tasks["removestone"].life.level == 0 && player.tasks["removestone"].history.maxlevel > 2 }},
+        parenttask:{taskid:"farm1"},
+        parentoffset:{x:60,y:60},
+        nohint:true,
+        name:"Commitment!",
+        predescription:"ACHIEVEMENT! Such commitment to your run down, tiny, not very good farm... you get a SECRET ACHIEVEMENT! I'm not actually sure if I like the idea of secret achievements yet, but this is how we learn! Your love and commitment to this almost completely useless farm has instilled in future yous a deeper understanding of farming earlier in life, and you will now start runs with 50 wheat. Wow, living multiple lives has so many benefits!",
+        completionstory:"ACHIEVEMENT UNLOCKED: Commitment!",
+        description:"You've already completed this achievement, you should never see this. If you do, please report it to the devs.",
+    });
+
+    registerTaskDefinition({
+        storyline:"farmer",
+        taskid:"muchmaster",
+        imageUrl:'images/cheivo_icon.png',
+        achievement:true,
+        repeatable:false,
+        passiveGeneration:null,
+        completionCosts:null,
+        completionGeneration:{narwhal:1},
+        completionLearn:null,
+        completionTools:null,
+        completionYears:null,
+        newlifeResources:{narwhal:1},
+        unlock:{permanent:true, func:function() { return player.tasks["trainfarming"].history.maxlevel > 3 }},
+        parenttask:{taskid:"farm1"},
+        parentoffset:{x:60,y:60},
+        nohint:true,
+        name:"Why Not!",
+        predescription:"ACHIEVEMENT! Okay, seriously - let's go over how skills work again - you only keep 10% when you die, so, like, you're really pushing hard, here, for, like, what, 0.1% boost? 100% -> 10% -> 110% -> 11% -> 111% -> 11.1%..... yeah, I think... like... There's gotta be something better to do, right? All the same, here. Have an achievement. I guess. Hmm, what do you deserve for this. Ah, I've got it! A pet narwhal. No, it doesn't do anything, but it does show up in your inventory! You're welcome.",
+        completionstory:"ACHIEVEMENT UNLOCKED: Why Not!",
         description:"You've already completed this achievement, you should never see this. If you do, please report it to the devs.",
     });
 
