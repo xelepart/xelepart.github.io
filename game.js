@@ -76,7 +76,7 @@ function computeCompletionCost(task, amount) {
     return amount * Math.pow(0.97,task.history.maxlevel);
 }
 
-var processPassiveTask = function(task, yearsElapsed) {
+function processPassiveTask(task, yearsElapsed) {
     for (resource in task.def.passiveGeneration) {
         if (!player.resources[resource]) {
             player.resources[resource] = 0;
@@ -85,7 +85,7 @@ var processPassiveTask = function(task, yearsElapsed) {
     }
 }
 
-var checkVisibleTasks = function() {
+function checkVisibleTasks() {
     game.tasks = [];
 
     hoveredTaskStillVisible = false;
@@ -120,10 +120,10 @@ var checkVisibleTasks = function() {
 
             var actuallyVisible = freebie || active || prereqMet || permanentPreviousLive;
 
-            var parenttaskHint = task.def.parenttask && game.alltasks[task.def.parenttask.taskid].history.seen && !(game.alltasks[task.def.parenttask.taskid].history.mode=='hintmode');
-            var parenttasksorHint = task.def.parenttasksor && task.def.parenttasksor.map((taskid) => game.alltasks[taskid].history.seen && !(game.alltasks[taskid].history.mode=='hintmode')).reduce((r,c)=>r||c, false);
-            var hintmode = !task.def.nohint && (parenttaskHint || parenttasksorHint);
-            var previouslyDone = task.history.maxlevel > 0;
+            var parenttaskHint = (!task.def.nohint || !task.def.nohint()) && task.def.parenttask && game.alltasks[task.def.parenttask.taskid].history.seen && !(game.alltasks[task.def.parenttask.taskid].history.mode=='hintmode');
+            var parenttasksorHint = (!task.def.nohint || !task.def.nohint()) && task.def.parenttasksor && task.def.parenttasksor.map((taskid) => game.alltasks[taskid].history.seen && !(game.alltasks[taskid].history.mode=='hintmode')).reduce((r,c)=>r||c, false);
+            var hintmode = (!task.def.nohint || !task.def.nohint()) && (parenttaskHint || parenttasksorHint);
+            var previouslyDone = task.history.maxlevel > 0 && !task.def.transient;
 
             if (actuallyVisible || hintmode || previouslyDone) {
                 task.history.mode = completed ? 'completed' : actuallyVisible ? 'live' : previouslyDone ? 'locked' : 'hintmode';
@@ -708,12 +708,13 @@ function updateTooltipText() {
 
     tooltip.innerHTML = hoveredOverTask.def.name + priorLevelDetailString + (hoveredOverTask.history.mode=='locked' ? "(LOCKED)" : "") + "<br/>"
                    + (hoveredOverTask.history.evercompleted ? hoveredOverTask.def.description : hoveredOverTask.def.predescription) + "<br/>"
-                   + "Takes " + Math.round(computeCompletionYears(hoveredOverTask)*100)/100 + " years<br/>"
+                   + (computeCompletionYears(hoveredOverTask) < 0.02 ? "Takes very little time.<br/>" : "Takes " + Math.round(computeCompletionYears(hoveredOverTask)*100)/100 + " years<br/>")
                    + (hoveredOverTask.def.completionCosts ? "Doing this would cost...<br/>" + Object.entries(hoveredOverTask.def.completionCosts).map(e => e[0] + ": " + (Math.round(computeCompletionCost(hoveredOverTask, e[1])*10)/10)) + "<br/>" : "")
-                   + (hoveredOverTask.def.passiveGeneration ? (hoveredOverTask.life.level > 0 ? "Currently passively producing " : "Upon completion would start to passively produce ") + "the following per year...<br/>" + Object.entries(hoveredOverTask.def.passiveGeneration).map(e => e[0] + ": " + (Math.round(computeResourceGeneration(hoveredOverTask, e[0], e[1])*10)/10)) + "<br/>" : "")
-                   + (hoveredOverTask.def.completionGeneration ? "Upon completion, will produce...<br/>" + Object.entries(hoveredOverTask.def.completionGeneration).map(e => e[0] + ": " + (Math.round(computeResourceGeneration(hoveredOverTask, e[0], e[1])*10)/10)) + "<br/>" : "")
-                   + (hoveredOverTask.def.completionLearn ? "Upon completion, you would learn skills...<br/>" + Object.entries(hoveredOverTask.def.completionLearn).map(e => e[1] + " levels of the " + e[0]) + " skill<br/>" : "")
-                   + (hoveredOverTask.def.completionTools ? "Upon completion, you will receive tools...<br/>" + Object.entries(hoveredOverTask.def.completionTools).map(e => "quality " + e[1] + " tools for " + e[0]) + "<br/>" : "")
+                   + (((!hoveredOverTask.def.hideCompletionBenefits || hoveredOverTask.life.level>0 || hoveredOverTask.history.maxlevel>0) && hoveredOverTask.def.passiveGeneration) ? (hoveredOverTask.life.level > 0 ? "Currently passively producing " : "Upon completion would start to passively produce ") + "the following per year...<br/>" + Object.entries(hoveredOverTask.def.passiveGeneration).map(e => e[0] + ": " + (Math.round(computeResourceGeneration(hoveredOverTask, e[0], e[1])*10)/10)) + "<br/>" : "")
+                   + (((!hoveredOverTask.def.hideCompletionBenefits || hoveredOverTask.life.level>0 || hoveredOverTask.history.maxlevel>0) && hoveredOverTask.def.completionGeneration) ? "Upon completion, will produce...<br/>" + Object.entries(hoveredOverTask.def.completionGeneration).map(e => e[0] + ": " + (Math.round(computeResourceGeneration(hoveredOverTask, e[0], e[1])*10)/10)) + "<br/>" : "")
+                   + (((!hoveredOverTask.def.hideCompletionBenefits || hoveredOverTask.life.level>0 || hoveredOverTask.history.maxlevel>0) && hoveredOverTask.def.completionLearn) ? "Upon completion, you would learn skills...<br/>" + Object.entries(hoveredOverTask.def.completionLearn).map(e => e[1] + " levels of the " + e[0]) + " skill<br/>" : "")
+                   + (((!hoveredOverTask.def.hideCompletionBenefits || hoveredOverTask.life.level>0 || hoveredOverTask.history.maxlevel>0) && hoveredOverTask.def.completionTools) ? "Upon completion, you will receive tools...<br/>" + Object.entries(hoveredOverTask.def.completionTools).map(e => "quality " + e[1] + " tools for " + e[0]) + "<br/>" : "")
+                   + ((hoveredOverTask.def.hideCompletionBenefits && !(hoveredOverTask.life.level>0 || hoveredOverTask.history.maxlevel>0)) ? "You are not sure what you would gain from this task.<br/>" : "")
                    + ((hoveredOverTask.life.level===0 && hoveredOverTask.history.maxlevel===0) ? "<br/>Is " + (hoveredOverTask.def.repeatable ? "" : "not ") + " repeatable after first completion.<br/>" : "");
    // things to maybe add:
    // "Will unlock..." ? (not sure i want this in the tooltip, honestly)
@@ -853,7 +854,7 @@ function resetGame() {
     registerTaskDefinition({
         storyline:"farmer",
         taskid:"farm2",
-        imageUrl:'images/farm2_icon.png',
+        imageUrl:'images/carrots2_icon.png',
         repeatable:true,
         completionCosts:null,
         passiveGeneration:{Carrots:0.5},
@@ -1037,7 +1038,7 @@ function resetGame() {
         unlock:{permanent:true, func:function() { return player.tasks["farm1"].life.level > 10 && player.tasks["removestone"].life.level == 0 && player.tasks["removestone"].history.maxlevel > 2 }},
         parenttask:{taskid:"farm1"},
         parentoffset:{x:60,y:60},
-        nohint:true,
+        nohint:()=>true,
         name:"Commitment!",
         predescription:"ACHIEVEMENT! Such commitment to your run down, tiny, not very good farm... you get a SECRET ACHIEVEMENT! I'm not actually sure if I like the idea of secret achievements yet, but this is how we learn! Your love and commitment to this almost completely useless farm has instilled in future yous a deeper understanding of farming earlier in life, and you will now start runs with 50 units of carrots. Wow, living multiple lives has so many benefits!",
         completionstory:"ACHIEVEMENT UNLOCKED: Commitment!",
@@ -1057,10 +1058,10 @@ function resetGame() {
         completionTools:null,
         completionYears:null,
         newlifeResources:{narwhal:1},
-        unlock:{permanent:true, func:function() { return player.tasks["trainfarming"].history.maxlevel > 3 }},
+        unlock:{permanent:true, func:function() { return player.tasks["trainfarming"] && player.tasks["trainfarming"].history.maxlevel > 3 }},
         parenttask:{taskid:"farm1"},
         parentoffset:{x:60,y:60},
-        nohint:true,
+        nohint:()=>true,
         name:"Why Not!",
         predescription:"ACHIEVEMENT! Okay, seriously - let's go over how skills work again - you only keep 10% when you die, so, like, you're really pushing hard, here, for, like, what, 0.1% boost? 100% -> 10% -> 110% -> 11% -> 111% -> 11.1%..... yeah, I think... like... There's gotta be something better to do, right? All the same, here. Have an achievement. I guess. Hmm, what do you deserve for this. Ah, I've got it! A pet narwhal. No, it doesn't do anything, but it does show up in your inventory! You're welcome.",
         completionstory:"ACHIEVEMENT UNLOCKED: Why Not!",
@@ -1077,227 +1078,188 @@ function resetGame() {
         completionGeneration:null,
         completionLearn:null,
         completionTools:null,
-        completionYears:0.25,
+        completionYears:5,
         categories:null,
         unlock:{taskid:"farm2", historiclevel:20, permanent:true},
         parenttask:{taskid:"farm2"},
         parentoffset:{x:180,y:0},
-        name:"Squire",
+        name:"Become Squire",
         hint:"You would need to be so good at farming for this. Like, it requires such a good farm, you might not even be able to do it without some kind of help.",
-        predescription:"A knight passes by the growing farm and notices the strength that can only come from years of hard labor clearing a farm the hard way. \"You could handle yourself in the melee, young one,\" he comments as he heads into the city. \"Think on it.\"",
-        completionstory:"Squiring is hard work, but somebody has to do it, B write more story here",
-        description:"Drudge away future Ser!",
+        predescription:"A passing knight notices your booming carrot empire and asks to stay the knight. You exchange stories long into the night, and it occurs to you that perhaps squiring for a great knight could be quite the career move for you. You ask pointed questions about how young squires begin their journey. Just in case. And, like. Now you could do it. Apparently, it's a pretty costly job, and requires some serious commitment.",
+        completionstory:"Look at you, a squire! Moving your way up in the world. I hope you're able to impress your knight. Good luck!",
+        description:"This time, my knight! Well, maybe...",
     });
+
     registerTaskDefinition({
         storyline:"squire",
-        taskid:"swords",
-        imageUrl:'images/swords_icon.png',
+        taskid:"winsword",
+        imageUrl:'images/squirewin_icon.png',
         repeatable:false,
         passiveGeneration:null,
-        completionCosts:null,
-        completionGeneration:null,
+        completionCosts:{Sword:1},
+        completionGeneration:{Favor:1},
         completionLearn:null,
         completionTools:null,
-        completionYears:5,
+        completionYears:1,
         categories:null,
-        unlock:{taskid:"squire", level:1, permanent:true},
-        parenttask:{taskid:"squire"},
-        parentoffset:{x:-60,y:60},
-        name:"Swords",
-        hint:"Once you are a Squire...",
-        predescription:"A knight must understand how to wield and ultimately defend against all manner of blades.",
-        completionstory:"You understand a little bit more about swordplay. Man these things are HEAVY!",
-        description:"You focus your time on different types of blades, begin to understand the training path ahead of you.",
-    });
-    registerTaskDefinition({
-        storyline:"squire",
-        taskid:"etiquette",
-        imageUrl:'images/etiquette_icon.png',
-        repeatable:false,
-        passiveGeneration:null,
-        completionCosts:{skill:100, horses:100},
-        completionGeneration:null,
-        completionLearn:null,
-        completionTools:null,
-        completionYears:5,
-        categories:null,
-        unlock:{completedtasksand:["skill","horses"]},
+        unlock:{permanent:false, func:function() { return player.tasks["squire"] && player.tasks["squire"].life.level > 0 && (player.tasks["winsword"].life.level > 0 || (player.tasks["swordfield1"].life.level == 0 && player.tasks["swordfield3"].life.level == 0 && player.tasks["swordfield4"].life.level == 0))}},
         parenttask:{taskid:"squire"},
         parentoffset:{x:0,y:60},
-        name:"Etiquette",
-        hint:"Once you are a Squire...",
-        predescription:"A knight must understand how to navigate the delicate social web of nobility.",
-        completionstory:"You understand almost nothing about etiquette other than it is hard to say, harder to spell and confusing.",
-        description:"You focus your time on comprehending the rules behind these silly approaches to life those in the court uphold.",
+        name:"Fetch Sword",
+        hint:"A task for a squire...",
+        nohint:()=>{ return player.tasks["squire"] && player.tasks["squire"].life.level > 0 },
+        predescription:"Your knight needs their sword. For a tournament. In an hour. But they lost it in a corn field last night. Quickly, now! You don't have much time!",
+        completionstory:"Your knight is truly happy you found their sword, and assures you that you are on the right path. You will likely be asked for additional favors if you continue to perform your duties.",
+        description:"Go grab that sword! You're on a roll!",
     });
+
     registerTaskDefinition({
         storyline:"squire",
-        taskid:"drudgery",
-        imageUrl:'images/drudgery_icon.png',
+        taskid:"failsword",
+        imageUrl:'images/squirefail_icon.png',
         repeatable:false,
         passiveGeneration:null,
         completionCosts:null,
-        completionGeneration:null,
+        completionGeneration:{Disfavor:1},
         completionLearn:null,
         completionTools:null,
         completionYears:5,
         categories:null,
-        unlock:{taskid:"squire", level:1, permanent:true},
+        unlock:{permanent:false, func:function() { return player.tasks["squire"] && player.tasks["squire"].life.level > 0 && !(player.tasks["winsword"].life.level > 0 || (player.tasks["swordfield1"].life.level == 0 && player.tasks["swordfield3"].life.level == 0 && player.tasks["swordfield4"].life.level == 0))}},
+        parenttask:{taskid:"squire"},
+        parentoffset:{x:0,y:60},
+        name:"Swords",
+        hint:"n/a",
+        transient:true,
+        nohint:()=>true,
+        predescription:"Your knight is disappointed in you for failing to find their sword. It takes them a long time before they ask you to go above and beyond again.",
+        completionstory:"If you keep this up, your knight'll be out of a job. And, like. So will you.",
+        description:"Such sadness. No sword.",
+    });
+
+    registerTaskDefinition({
+        storyline:"squire",
+        taskid:"swordfield1",
+        imageUrl:'images/swordfield_icon.png',
+        repeatable:false,
+        hideCompletionBenefits:true,
+        passiveGeneration:null,
+        completionCosts:null,
+        completionGeneration:{Corn:1},
+        completionLearn:null,
+        completionTools:null,
+        completionYears:0.01,
+        categories:null,
+        unlock:{permanent:false, func:function() { return player.tasks["squire"] && player.tasks["squire"].life.level > 0 }},
         parenttask:{taskid:"squire"},
         parentoffset:{x:60,y:60},
-        name:"Drudgery",
-        hint:"Once you are a Squire...",
-        predescription:"A Squire must do all sorts of nonsense for his Knight.  It will be worth it.  Hopefully.",
-        completionstory:"You understand a little bit more about what sort of nonsense your new life entails",
-        description:"You focus your time on chasing the never ending tasks set you by your Knight.",
+        name:"Search...",
+        transient:true,
+        hint:"n/a",
+        nohint:()=>true,
+        predescription:"You only have time to search one quadrant of the field if you want to get back in time for your knight! Quickly!",
+        completionstory:"Well, you didn't find the sword, but you did grab an ear of corn while you were there. It'll probably taste good... with your misery pie...",
+        description:"I suppose you could go back for that corn?",
     });
+
     registerTaskDefinition({
         storyline:"squire",
-        taskid:"strength",
-        imageUrl:'images/strength_icon.png',
-        repeatable:true,
+        taskid:"swordfield2",
+        imageUrl:'images/swordfield_icon.png',
+        repeatable:false,
+        hideCompletionBenefits:true,
         passiveGeneration:null,
         completionCosts:null,
-        completionGeneration:{strength:100},
+        completionGeneration:{Sword:1},
         completionLearn:null,
         completionTools:null,
-        completionYears:0.5,
-        categories:{swords:1},
-        unlock:{taskid:"swords", level:1, permanent:true},
-        parenttask:{taskid:"swords"},
-        parentoffset:{x:0,y:60},
-        name:"Strength",
-        hint:"Slice and Dice...",
-        predescription:"Moving all this metal around will surely make this training easier over time",
-        completionstory:"Man these things are HEAVY!",
-        description:"Picking things up and putting them down, ie the old fashioned way to get stronger.",
-    });
-    registerTaskDefinition({
-        storyline:"squire",
-        taskid:"rules",
-        imageUrl:'images/rules_icon.png',
-        repeatable:true,
-        passiveGeneration:null,
-        completionCosts:null,
-        completionGeneration:{rules:100},
-        completionLearn:null,
-        completionTools:null,
-        completionYears:0.5,
+        completionYears:0.01,
         categories:null,
-        unlock:{taskid:"etiquette", level:1, permanent:true},
-        parenttask:{taskid:"etiquette"},
-        parentoffset:{x:0,y:60},
-        name:"Rules",
-        hint:"Requires being fancy...",
-        predescription:"A knight must understand how to navigate the delicate social web of nobility.",
-        completionstory:"Rules, rules, and more rules. Here you were thinking  you were here to fight.",
-        description:"One fork placement and silly bow at a time you will learn to navigate the courts like a Earl.",
+        unlock:{permanent:false, func:function() { return player.tasks["squire"] && player.tasks["squire"].life.level > 0 }},
+        parenttask:{taskid:"squire"},
+        parentoffset:{x:120,y:60},
+        name:"Search...",
+        transient:true,
+        hint:"n/a",
+        nohint:()=>true,
+        predescription:"You only have time to search one quadrant of the field if you want to get back in time for your knight! Quickly!",
+        completionstory:"Amazing! You found the sword just lying there next to some undergarments! You quickly grab it and rush back to your knight...",
+        description:"Yeah! Grab that sword!",
     });
+
     registerTaskDefinition({
         storyline:"squire",
-        taskid:"armor",
-        imageUrl:'images/armor_icon.png',
-        repeatable:true,
+        taskid:"swordfield3",
+        imageUrl:'images/swordfield_icon.png',
+        repeatable:false,
+        hideCompletionBenefits:true,
         passiveGeneration:null,
         completionCosts:null,
-        completionGeneration:{armor:100},
+        completionGeneration:{Corn:1},
         completionLearn:null,
         completionTools:null,
-        completionYears:0.5,
-        categories:{drudgery:1},
-        unlock:{taskid:"drudgery", level:1, permanent:true},
-        parenttask:{taskid:"drudgery"},
-        parentoffset:{x:0,y:60},
-        name:"Armor",
-        hint:"What a chore...",
-        predescription:"A Squire must do all sorts of nonsense for his Knight.  First, clean and assemble their armor.",
-        completionstory:"You understand a little bit more about how to put on this complicated outfit",
-        description:"Only by taking it apart and cleaning it will you know how it really works.",
+        completionYears:0.01,
+        categories:null,
+        unlock:{permanent:false, func:function() { return player.tasks["squire"] && player.tasks["squire"].life.level > 0 }},
+        parenttask:{taskid:"squire"},
+        parentoffset:{x:180,y:60},
+        name:"Search...",
+        transient:true,
+        hint:"n/a",
+        nohint:()=>true,
+        predescription:"You only have time to search one quadrant of the field if you want to get back in time for your knight! Quickly!",
+        completionstory:"Well, you didn't find the sword, but you did grab an ear of corn while you were there. It'll probably taste good... with your misery pie...",
+        description:"I suppose you could go back for that corn?",
     });
+
     registerTaskDefinition({
         storyline:"squire",
-        taskid:"skill",
-        imageUrl:'images/skill_icon.png',
-        repeatable:true,
+        taskid:"swordfield4",
+        imageUrl:'images/swordfield_icon.png',
+        repeatable:false,
+        hideCompletionBenefits:true,
         passiveGeneration:null,
         completionCosts:null,
-        completionGeneration:{skill:100},
+        completionGeneration:{Corn:1},
         completionLearn:null,
         completionTools:null,
-        completionYears:0.5,
-        categories:{swords:1},
-        unlock:{taskid:"strength", level:1, permanent:true},
-        parenttask:{taskid:"strength"},
-        parentoffset:{x:0,y:60},
-        name:"Skill",
-        hint:"Strength is not enough...",
-        predescription:"Once you are strong enough to lift a blade you might be able to start in on wielding it properly",
-        completionstory:"You understand a little bit more about where to stick the pointy end",
-        description:"You focus your time on moving through the forms.",
+        completionYears:0.01,
+        categories:null,
+        unlock:{permanent:false, func:function() { return player.tasks["squire"] && player.tasks["squire"].life.level > 0 }},
+        parenttask:{taskid:"squire"},
+        parentoffset:{x:240,y:60},
+        name:"Search...",
+        transient:true,
+        hint:"n/a",
+        nohint:()=>true,
+        predescription:"You only have time to search one quadrant of the field if you want to get back in time for your knight! Quickly!",
+        completionstory:"Well, you didn't find the sword, but you did grab an ear of corn while you were there. It'll probably taste good... with your misery pie...",
+        description:"I suppose you could go back for that corn?",
     });
+
     registerTaskDefinition({
         storyline:"squire",
-        taskid:"finesse",
-        imageUrl:'images/finesse_icon.png',
-        repeatable:true,
-        passiveGeneration:null,
-        completionCosts:{skill:50},
-        completionGeneration:{finesse:100},
-        completionLearn:null,
-        completionTools:null,
-        completionYears:0.5,
-        categories:{etiquette:1},
-        unlock:{taskid:"rules", level:1, permanent:true},
-        parenttask:{taskid:"rules"},
-        parentoffset:{x:0,y:60},
-        name:"Society",
-        hint:"Do you know the rules?",
-        predescription:"A knight must understand how to navigate the delicate social web of nobility.",
-        completionstory:"You thought etiquette was hard to spell and here we go with finesse...",
-        description:"Once you put the ee in \"finesse\" you will surely win the approval of your knight.",
-    });
-    registerTaskDefinition({
-        storyline:"squire",
-        taskid:"horses",
-        imageUrl:'images/horses_icon.png',
-        repeatable:true,
-        passiveGeneration:null,
-        completionCosts:{skill:50, armor:50},
-        completionGeneration:{horses:100, strength:100},
-        completionLearn:null,
-        completionTools:null,
-        completionYears:0.5,
-        categories:{drudgery:1},
-        unlock:{completedtasksand:["strength","armor"]},
-        parenttask:{taskid:"armor"},
-        parentoffset:{x:0,y:60},
-        name:"Horses",
-        hint:"This needs two...",
-        predescription:"Caring for horses is harddddd work.",
-        completionstory:"You smell, you ache, but it was worth it - look at that horsey shine!",
-        description:"The proper care and handling of a horse will make or break a Squire.",
-    });
-    registerTaskDefinition({
-        storyline:"squire",
-        taskid:"knight",
-        imageUrl:'images/knight_icon.png',
+        taskid:"wintroll",
+        imageUrl:'images/squirewin_icon.png',
         repeatable:false,
         passiveGeneration:null,
-        completionCosts:{strength:1000, skill:1000, rules:1000, finesse:1000, armor:1000, horses:1000},
-        completionGeneration:{honor:100},
+        completionCosts:{Key:1},
+        completionGeneration:{Favor:1},
         completionLearn:null,
         completionTools:null,
-        completionYears:0.5,
+        completionYears:1,
         categories:null,
-        unlock:{completedtasksand:["skill","finesse","horses"]},
-        parenttask:{taskid:"finesse"},
-        parentoffset:{x:0,y:60},
-        name:"Knighthood!",
-        hint:"All together now...",
-        predescription:"A Squire must fully understand the three pillars of their training.",
-        completionstory:"Well done, Ser Knight!",
-        description:"By the almighty, you survived the training with your wits and back intact! Perhaps a Knight's life IS for you, afterall...",
+        unlock:{permanent:false, func:function() { return (player.tasks["winsword"] && player.tasks["winsword"].life.level > 0 || player.tasks["failsword"] && player.tasks["failsword"].life.level > 0) && (player.tasks["wintroll"].life.level > 0 || (true))}},
+        parenttask:{taskid:"squire"},
+        parentoffset:{x:0,y:120},
+        name:"Distract Troll",
+        hint:"Another task for a squire...",
+        nohint:()=>{ return player.tasks["squire"] && player.tasks["squire"].life.level > 0 },
+        predescription:"If you're playing this game before I've published it, and got this far -- you're at the end! I'm working on this line now.",
+        completionstory:"You are clearly a great squire, obtaining this key and all that. You basically saved your knight's reputation here.",
+        description:"A Happy Knight means a Happy Squire!",
     });
+
 
     verifyTasks();
 
