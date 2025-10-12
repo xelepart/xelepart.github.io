@@ -1085,7 +1085,7 @@ function resetGame() {
         parentoffset:{x:180,y:0},
         name:"Become Squire",
         hint:"You would need to be so good at farming for this. Like, it requires such a good farm, you might not even be able to do it without some kind of help.",
-        predescription:"A passing knight notices your booming carrot empire and asks to stay the knight. You exchange stories long into the night, and it occurs to you that perhaps squiring for a great knight could be quite the career move for you. You ask pointed questions about how young squires begin their journey. Just in case. And, like. Now you could do it. Apparently, it's a pretty costly job, and requires some serious commitment.",
+        predescription:"A passing knight notices your booming carrot empire and asks to stay the night. You exchange stories long into the night, and it occurs to you that perhaps squiring for a great knight could be quite the career move for you. You ask pointed questions about how young squires begin their journey. Just in case. And, like. Now you could do it. Apparently, it's a pretty costly job, and requires some serious commitment.",
         completionstory:"Look at you, a squire! Moving your way up in the world. I hope you're able to impress your knight. Good luck!",
         description:"This time, my knight! Well, maybe...",
     });
